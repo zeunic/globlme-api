@@ -21,8 +21,9 @@ var validate = require('./modules/validate.js'),
 //   });
 // });
 
-
-// Configuration
+/**
+* Express App Configuration Settings
+*/
 
 api.configure(function(){
 	api.set('views', __dirname + '/views');
