@@ -1,2 +1,8 @@
 h1= title
-p Welcome to #{title}
+form(method="post", action="/stream")
+	input(name="id",value="0", type="text")
+	input(type="hidden",name="_method",value="post")
+	br
+	input(type="file", name="image")
+	br
+	input(type="submit", name="submit")
