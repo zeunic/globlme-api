@@ -63,36 +63,6 @@ api.put('/stream', setUpRequest, stream.updateNode);
 api.post('/stream', setUpRequest, stream.createNode);
 api.del('/stream/:id', setUpRequest, stream.deleteNode);
 
-api.get('/', function(req, res){
-  res.send('<form method="post" name="thisForm" id="thisForm" enctype="multipart/form-data">'
-    + '<p>Title: <input type="text" name="title" /></p>'
-    + '<p>Image: <input type="file" name="image" /></p>'
-    + '<input type="hidden" name="_method" value="post" />'
-    + '<p><input type="submit" value="Upload" /></p>'
-    + '</form>');
-});
-
-api.post('/', function(req, res, next){
-  // the uploaded file can be found as `req.files.image` and the
-  // title field as `req.body.title`
-
-	req.on('data', function(){
-		console.log('receiving data');
-	});
-
-	req.on('end', function(){
-		console.log('request ended...');
-	});
-
-	console.log(req.files);
-
-	cloudfilesClient.addFile('globl.me', { remote: 'success.jpg', local: req.files.image.path }, function(err, success){
-		if (success) { console.log ('file uploaded'); }
-			else { console.log(err); }
-	});
-
-});
-
 console.log(api.settings.env);
 
 if (api.settings.env == "development") {
