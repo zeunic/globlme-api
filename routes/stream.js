@@ -36,6 +36,10 @@ exports.updateNode = function updateNode(req,res) {
 exports.createNode = function createNode(req,res) {
 	console.log('should post: ');
 
+	console.log(req.params);
+	console.log(req.body);
+	console.log(req.files);
+
 	// cloudfilesClient.setAuth(function(){
 	// 	cloudfilesClient.addFile('globl.me', {
 	// 		remote: 'userGuid/file_cdn2.png',

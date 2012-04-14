@@ -10,17 +10,14 @@ var validate = require('./modules/validate.js'),
 	stream = require('./routes/stream.js'),
 	cloudfiles = require('cloudfiles');
 
-// var config = { auth: { username: 'zeunicllc', apiKey: 'e4e2973174da5aeb4e63fbdd51f39527' } };
-// var cloudfilesClient = cloudfiles.createClient(config);
+var config = { auth: { username: 'zeunicllc', apiKey: 'e4e2973174da5aeb4e63fbdd51f39527' } };
+var cloudfilesClient = cloudfiles.createClient(config);
 
-// cloudfilesClient.setAuth(function(){
-//   cloudfilesClient.getContainer('globl.me', true, function(test, container){
-//     console.log(container);
-//     container.getFiles(function(err, files){
-//       console.log(files);
-//     });
-//   });
-// });
+cloudfilesClient.setAuth(function(){
+	cloudfilesClient.getContainer('globl.me', true, function(test, container){
+		console.log(container);
+	});
+});
 
 /**
 * Express App Configuration Settings
@@ -29,7 +26,7 @@ var validate = require('./modules/validate.js'),
 api.configure(function(){
 	api.set('views', __dirname + '/views');
 	api.set('view engine', 'jade');
-	// api.use(express.bodyParser());
+	api.use(express.bodyParser());
 	api.use(express.methodOverride());
 	api.use(api.router);
 	api.use(express.static(__dirname + '/public'));
@@ -70,6 +67,7 @@ api.get('/', function(req, res){
   res.send('<form method="post" name="thisForm" id="thisForm" enctype="multipart/form-data">'
     + '<p>Title: <input type="text" name="title" /></p>'
     + '<p>Image: <input type="file" name="image" /></p>'
+    + '<input type="hidden" name="_method" value="post" />'
     + '<p><input type="submit" value="Upload" /></p>'
     + '</form>');
 });
@@ -84,15 +82,15 @@ api.post('/', function(req, res, next){
 
 	req.on('end', function(){
 		console.log('request ended...');
-		console.log(req);
 	});
 
-	// res.send(format('\nuploaded %s (%d Kb) to %s as %s'
-	// 	, req.files.image.name
-	// 	, req.files.image.size / 1024 | 0
-	// 	, req.files.image.path
-	// 	, req.body.title)
-	// );
+	console.log(req.files);
+
+	cloudfilesClient.addFile('globl.me', { remote: 'success.jpg', local: req.files.image.path }, function(err, success){
+		if (success) { console.log ('file uploaded'); }
+			else { console.log(err); }
+	});
+
 });
 
 

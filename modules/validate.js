@@ -2,7 +2,7 @@
  * Module dependencies.
  */
 
-var crypto = require('crypto');
+// var crypto = require('crypto');
 
 exports.defineRequestAction = function defineRequestAction(req,res,next) {
 	console.log('defineRequestAction:');
