@@ -41,7 +41,7 @@ api.configure('production', function(){
 });
 
 // Route preconditions to set up a valid and authorized request and request data
-var setUpRequest = [validate.authorizeRequest, validate.defineRequestAction, validate.validateRequestData];
+var setUpRequest = [validate.validateRequestData, validate.authorizeRequest, validate.defineRequestAction];
 
 api.param(':relationship', function(req,res, next, relationship) {
 	console.log('this precondition would determine you gave a relationship param and validate it against the list of pre-determined valid relationship look ups (like comments/likes)');
