@@ -15,7 +15,7 @@ var cloudfilesClient = cloudfiles.createClient(config);
 
 cloudfilesClient.setAuth(function(){
 	cloudfilesClient.getContainer('globl.me', true, function(test, container){
-		console.log(container);
+		// console.log(container);
 	});
 });
 
@@ -93,7 +93,11 @@ api.post('/', function(req, res, next){
 
 });
 
+console.log(api.settings.env);
 
-
-api.listen(3000);
-console.log("Express server listening on port %d in %s mode", api.address().port, api.settings.env);
+if (api.settings.env == "development") {
+	api.listen(3000);
+} else {
+	api.listen(80);
+}
+// console.log("Express server listening on port %d in %s mode", api.address().port, api.settings.env);
