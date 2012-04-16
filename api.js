@@ -51,25 +51,28 @@ api.param(':relationship', function(req,res, next, relationship) {
 	next();
 });
 
-/// comments
-
+// placeholder api version precondition
+api.param(':apiVersion', function(req, res, next, apiVersion){
+	if(apiVersion === 'v1') {
+		next();
+	} else {
+		res.end('Invalid API Version request');
+	}
+});
 
 /*
  * Route definitions for /stream section of API
  */
 
-api.get('/stream/:id/:relationship', setUpRequest, stream.getNodesByRelationship);
-api.get('/stream/:id', setUpRequest, stream.getNodeById);
-api.get('/stream', setUpRequest, stream.getStream);
-api.put('/stream', setUpRequest, stream.updateNode);
-api.post('/stream', setUpRequest, stream.createNode);
-api.del('/stream/:id', setUpRequest, stream.deleteNode);
-
-console.log(api.settings.env);
+api.get('/:apiVersion/stream/:id/:relationship', setUpRequest, stream.getNodesByRelationship);
+api.get('/:apiVersion/stream/:id', setUpRequest, stream.getNodeById);
+api.get('/:apiVersion/stream', setUpRequest, stream.getStream);
+api.put('/:apiVersion/stream', setUpRequest, stream.updateNode);
+api.post('/:apiVersion/stream', setUpRequest, stream.createNode);
+api.del('/:apiVersion/stream/:id', setUpRequest, stream.deleteNode);
 
 if (api.settings.env == "development") {
 	api.listen(3000);
 } else {
 	api.listen(80);
 }
-// console.log("Express server listening on port %d in %s mode", api.address().port, api.settings.env);
