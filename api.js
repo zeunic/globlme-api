@@ -8,16 +8,7 @@ var express = require('express'),
 
 var validate = require('./modules/validate.js'),
 	stream = require('./routes/stream.js'),
-	cloudfiles = require('cloudfiles');
-
-var config = { auth: { username: 'zeunicllc', apiKey: 'e4e2973174da5aeb4e63fbdd51f39527' } };
-var cloudfilesClient = cloudfiles.createClient(config);
-
-cloudfilesClient.setAuth(function(){
-	cloudfilesClient.getContainer('globl.me', true, function(test, container){
-		// console.log(container);
-	});
-});
+	Step = require('step');
 
 /**
 * Express App Configuration Settings
@@ -63,6 +54,14 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
 /*
  * Route definitions for /stream section of API
  */
+
+var images = require('./modules/image');
+
+api.get('/image', function(req,res,next){
+	images.formatImage['cropSquare']('tebowing.jpg');
+	// console.log(images);
+});
+
 
 api.get('/:apiVersion/stream/:id/:relationship', setUpRequest, stream.getNodesByRelationship);
 api.get('/:apiVersion/stream/:id', setUpRequest, stream.getNodeById);
