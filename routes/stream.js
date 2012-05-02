@@ -3,6 +3,15 @@
  * (finish desc later)
  */
 
+
+ module.exports = function Stream(configOptions){
+
+
+	return {
+
+ 	};
+ };
+
  exports.getStream = function getStream(req,res){
 	console.log('no id OR relationship was passed');
 };
