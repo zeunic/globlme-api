@@ -6,61 +6,61 @@ var Neo4j = require('neo4j'),
 	db;
 
 var User = function(config) {
+	// TODO
+	// gracefully set up default config values if none are passed in
+	// or throw appropriate errors
+
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
 	console.log(config.databaseUrl + ':' + config.port);
-};
 
-User.prototype.userExists = function userExists(req,res,next) {
-	// takes a request and checks Graph for ID with index of email or given FB id
-	// returns positive if one is found, and the key
-	// returns negative if neither is found
+	var UsersReferenceNode = {};
 
-	db.getNodeById(1, function callback(err, result) {
-		if (err) {
-			console.error(err);
+	db.query("START n = (0) MATCH (n) <-[:USERS_REFERENCE]- (user_ref) RETURN user_ref", function(errors, nodes) {
+		if (errors) {
+			// TODO: throw errors
 		} else {
-			console.log(result);    // if an object, inspects the object
-			// res.send(result.db._request.get.toString());
-			console.log('creating createRelationshipTo');
-			db.getNodeById(3, function callback(err, other){
-				console.log('got the other id:');
-				console.log(other);
-				result.createRelationshipTo(other, 'attempt_what', { data: "lol what is this" }, function(err){
-					console.log('create rel args');
-					console.dir(arguments);
-				});
-			});
+			UsersReferenceNode = nodes;
+			console.log(UsersReferenceNode);
 		}
 	});
 
-	// res.send('Fetch\'d');
-	//res.end();
-
-};
-
-User.prototype.createUser = function createUser(req,res,next) {
-	// { username, password (sha256), first, last, email, birthday, sex, location  }
-
-	var newUser = JSON.parse(req.body.data);
-
-	console.log('create user: ' + newUser);
-
-	var userResponse = {
-		id: UUID.v1(),
-		username: newUser.username,
-		first: newUser.first,
-		last: newUser.last,
-		email: newUser.email,
-		birthday: newUser.birthday,
-		sex: newUser.sex,
-		location: newUser.location
+	var getUserByEmail = function(){
+		// check graph to see if user exists by given email
 	};
 
-	console.log(userResponse);
+	var getUserByFacebookID = function(){
+		// check graph to see if user exists by given FB id
+	};
 
-	res.json(JSON.stringify(userResponse));
-	res.end();
+	return {
+		checkUserExists: function(req,res,next) {
+			// takes a request and checks Graph for ID with index of email or given FB id
+			// returns positive if one is found, and the key
+			// returns negative if neither is found
+		},
+		createUser: function(req,res,next){
+			// { username, password (sha256), first, last, email, birthday, sex, location  }
+			var newUser = JSON.parse(req.body.data);
 
+			console.log('create user: ' + newUser);
+
+			var userResponse = {
+				id: UUID.v1(),
+				username: newUser.username,
+				first: newUser.first,
+				last: newUser.last,
+				email: newUser.email,
+				birthday: newUser.birthday,
+				sex: newUser.sex,
+				location: newUser.location
+			};
+
+			console.log(userResponse);
+
+			res.json(JSON.stringify(userResponse));
+			res.end();
+		}
+	};
 };
 
 module.exports = User;

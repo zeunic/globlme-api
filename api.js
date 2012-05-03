@@ -93,8 +93,8 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
 // comment here
 api.post('/:apiVersion/moment', setUpRequest, MomentModule.createMoment);
 
-// user route declarations -> maps to user.js
-api.get('/:apiVersion/user/exists', UserModule.userExists);
+// user route declarations -> maps to ./routes/user.js
+api.get('/:apiVersion/user/exists', UserModule.checkUserExists);
 api.post('/:apiVersion/user/create', setUpRequest, UserModule.createUser);
 
 
