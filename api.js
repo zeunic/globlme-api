@@ -10,12 +10,10 @@ var validate = require('./modules/validate.js'),
 	stream = require('./routes/stream.js'),
 	User = require('./routes/user.js'),
 	Moment = require('./routes/moment.js'),
-	Admin = require('./routes/admin.js'),
 	//Images = require('./modules/image.js'),
 	Step = require('step');
 
 var dbConfig = { port: '7474', databaseUrl: '' };
-
 dbConfig.databaseUrl = (api.settings.env == "development") ? "http://localhost" : "http://10.179.106.202";
 
 
@@ -24,8 +22,6 @@ var UserModule = new User(dbConfig),
 	//ImageModule = new Images(),
 	MomentModule = new Moment(),
 	AdminModule = new Admin(dbConfig);
-
-
 
 
 /**
@@ -50,7 +46,7 @@ api.configure('production', function(){
 });
 
 // Route preconditions to set up a valid and authorized request and request data
-var setUpRequest = [validate.validateRequestData/*, validate.authorizeRequest*/, validate.defineRequestAction];
+var setUpRequest = [validate.validateRequestData, validate.authorizeRequest, validate.defineRequestAction];
 
 // placeholder api version precondition
 api.param(':apiVersion', function(req, res, next, apiVersion){
@@ -94,14 +90,8 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
 api.post('/:apiVersion/moment', setUpRequest, MomentModule.createMoment);
 
 // user route declarations -> maps to ./routes/user.js
-api.get('/:apiVersion/user/exists', UserModule.checkUserExists);
+api.post('/:apiVersion/user/exists', setUpRequest, UserModule.checkUserExists);
 api.post('/:apiVersion/user/create', setUpRequest, UserModule.createUser);
-
-
-// Admin Routes
-api.get('/admin/query', AdminModule.query);
-api.post('/admin/createNode', AdminModule.createNode);
-api.post('/admin/createRel', AdminModule.createRel);
 
 if (api.settings.env == "development") {
 	api.listen(3000);
