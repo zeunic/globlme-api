@@ -116,10 +116,9 @@ var User = function(config) {
 			);
 		},
 		authorizeUser: function(req,res,next){
-			var credentials = JSON.parse(req.body.data), userData;
-			console.log('testing...');
+			var credentials = JSON.parse(req.body.data), userData = {};
 
-			db.getIndexedNode('user', 'username', credentials.username, function(err, result){
+			db.getIndexedNode('user', 'username', credentials.username, function(err, result) {
 				if(!err && result) {
 					userData = result._data.data;
 				}

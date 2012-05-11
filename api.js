@@ -10,6 +10,7 @@ var validate = require('./modules/validate.js'),
 	stream = require('./routes/stream.js'),
 	User = require('./routes/user.js'),
 	Moment = require('./routes/moment.js'),
+	Tag = require('./routes/tags.js'),
 	//Images = require('./modules/image.js'),
 	Step = require('step');
 
@@ -19,6 +20,7 @@ dbConfig.databaseUrl = (api.settings.env == "development") ? "http://localhost" 
 
 // API Modules
 var UserModule = new User(dbConfig),
+	TagModule = new Tag(dbConfig),
 	//ImageModule = new Images(),
 	MomentModule = new Moment();//,
 	// AdminModule = new Admin(dbConfig);
@@ -84,6 +86,9 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
 // api.put('/:apiVersion/stream', setUpRequest, stream.updateNode);
 // api.post('/:apiVersion/stream', setUpRequest, stream.createNode);
 // api.del('/:apiVersion/stream/:id', setUpRequest, stream.deleteNode);
+
+api.post('/:apiVersion/stream/tags/create', setUpRequest, TagModule.createTag);
+api.post('/:apiVersion/stream/tags', setUpRequest, TagModule.getTags);
 
 
 // comment here
