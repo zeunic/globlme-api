@@ -6,21 +6,16 @@ var crypto = require('crypto'),
 	rc;
 
 exports.defineRequestAction = function defineRequestAction(req,res,next) {
-	console.log(req.route);
 	next();
 };
 
 exports.validateRequestData = function validateRequestData(req,res,next) {
 	// this data will need flushed out as the API evolves to multiple
 
-	console.dir(req.body);
-	console.dir(req.files);
-
 	if (req.body.key === "globlme" && req.body.data && req.body.auth) {
-		console.log('this is hackily valid');
 		next();
 	} else {
-		console.log('you probably did not send me what i want');
+		// idk...
 	}
 
 	rc = req.body;
@@ -36,7 +31,6 @@ exports.authorizeRequest = function authorizeRequest(req,res,next){
 	var authConfirm = sha256.digest('hex');
 
 	if (authConfirm === rc.auth) {
-		console.log('authorized request');
 		next();
 	} else {
 		// res.writeHead(401, {'Content-Type': 'application/json'});

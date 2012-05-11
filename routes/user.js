@@ -30,72 +30,40 @@ var User = function(config) {
 	});
 
 	var getUserByEmail = function(userEmail, callback){
-		// check graph to see if user exists by given email
-		var userCheck = {};
-		console.log('checking by email...');
-
-		db.getIndexedNode('users', 'email', userEmail, function(err, result){
-			if(!err) {
-				console.log(results);
-				callback(results);
-			} else {
-				console.log(err);
-				callback({ status: 'error', message: err });
-			}
-		});
+		db.getIndexedNode('user', 'email', userEmail, callback);
 	};
 
 	var getUserByFacebookID = function(userFacebookID, callback){
-		// check graph to see if user exists by given FB id
-		var userCheck = {};
-		console.log('checking by fbID...');
-
-		db.getIndexedNode('users', 'fbID', userFacebookID, function(err, result){
-			if(!err) {
-				console.log(results);
-				callback(results);
-			} else {
-				console.log(err);
-				callback({ status: 'error', message: err });
-			}
-		});
+		db.getIndexedNode('user', 'fbID', userFacebookID, callback);
 	};
 
 	return {
 		checkUserExists: function(req,res,next) {
-			// takes a request and checks Graph for ID with index of email or given FB id
-			// returns positive if one is found, and the key
-			// returns negative if neither is found
-
-			// { key: 'globlme',
-			//   data: '{"email":"joseph.lessard@yahoo.com","fbID":"19213532","unique":0.968396843643859}',
-			//   auth: '324ee1716342a1a92720d28e9a51ceb5622bc50a0091df5703e19e2b9dfa1734' }
-
 			var data = JSON.parse(req.body.data);
 
-			getUserByEmail(data.email, function(){
-				console.log('return from email check');
-				console.dir(arguments);
-			});
+			Step(
+				function lookUpUser(){
+					getUserByEmail(data.email, this.parallel() );
+					getUserByFacebookID(data.fbID, this.parallel() );
+				},
+				function sendResults(err, resultsByEmail, resultsByFBId){
+					// does logic go here for this?
 
-			getUserByFacebookID(data.fbID, function(){
-				console.log('return from fb check');
-				console.dir(argumments);
-			});
+					var userData = {};
 
-			res.json({
-				status: "success",
-				data: {
-					id: UUID.v1(),
-					username: "stephen",
-					first: "Stephen",
-					last: "Rivas Jr",
-					email: "me@stephenrivasjr.com",
-					birthday: new Date().getTime(),
-					sex: "M",
-					location: "Orlando"
+					if(!resultsByEmail && !resultsByFBId) {
+						res.json({ status: 'error', message: 'No user found with those credentials.' });
+					} else if (resultsByFBId) {
+						userData = resultsByFBId._data.data;
+					} else {
+						userData = resultsByEmail._data.data;
+					}
+
+					delete userData.password;
+					res.json({ status: 'success', data: userData });
+
 				}
-			});
+			);
 
 			// end or next?
 		},
@@ -130,7 +98,8 @@ var User = function(config) {
 				},
 				function indexNode(){
 					node.index( INDEX_NAME, 'email', newUser.email, this.parallel() );
-					if (!fbID) node.index( INDEX_NAME, 'email', newUser.fbID, this.parallel() );
+					node.index( INDEX_NAME, 'username', newUser.username, this.parallel() );
+					if (newUser.fbID) { node.index( INDEX_NAME, 'fbID', newUser.fbID, this.parallel() ); }
 				},
 				function relateUserRef(){
 					node.createRelationshipTo( UserReferenceNode, 'MEMBER_OF', {}, this );
@@ -145,6 +114,24 @@ var User = function(config) {
 					res.end();
 				}
 			);
+		},
+		authorizeUser: function(req,res,next){
+			var credentials = JSON.parse(req.body.data), userData;
+			console.log('testing...');
+
+			db.getIndexedNode('user', 'username', credentials.username, function(err, result){
+				if(!err && result) {
+					userData = result._data.data;
+				}
+
+				if(userData.password === credentials.password) {
+					delete userData.password;
+					res.json({ status: 'success', data: userData });
+				} else {
+					res.json({ status: 'error', message: 'Invalid login credentials' });
+				}
+
+			});
 		}
 	};
 };

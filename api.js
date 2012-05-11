@@ -20,8 +20,8 @@ dbConfig.databaseUrl = (api.settings.env == "development") ? "http://localhost" 
 // API Modules
 var UserModule = new User(dbConfig),
 	//ImageModule = new Images(),
-	MomentModule = new Moment(),
-	AdminModule = new Admin(dbConfig);
+	MomentModule = new Moment();//,
+	// AdminModule = new Admin(dbConfig);
 
 
 /**
@@ -91,6 +91,7 @@ api.post('/:apiVersion/moment', setUpRequest, MomentModule.createMoment);
 
 // user route declarations -> maps to ./routes/user.js
 api.post('/:apiVersion/user/exists', setUpRequest, UserModule.checkUserExists);
+api.post('/:apiVersion/user/auth', setUpRequest, UserModule.authorizeUser);
 api.post('/:apiVersion/user/create', setUpRequest, UserModule.createUser);
 
 if (api.settings.env == "development") {
