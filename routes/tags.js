@@ -12,7 +12,7 @@ var Tag = function(config) {
 	// or throw appropriate errors
 
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
-	// console.log(config.databaseUrl + ':' + config.port);
+	console.log('Tag Module connected: '+config.databaseUrl + ':' + config.port);
 
 	db.query("START n = node(0) MATCH (n) <-[:TAGS_REFERENCE]- (tag_ref) RETURN tag_ref", function(errors, nodes) {
 		if (errors) {
@@ -28,20 +28,25 @@ var Tag = function(config) {
 	return {
 		createTag: function(req,res,next){
 			console.log('so...make you a tag, eh?');
+			console.log(req.body);
 
-			var tag = db.createNode({ tag: req.body.data.tag });
+			var requestData = JSON.parse(req.body.data);
+			var tag = db.createNode({ tag: requestData.tag });
+			console.log(tag);
 
 			Step(
 				function saveTag(){
 					tag.save(this);
 				},
 				function indexTag(){
-					tag.index( INDEX_NAME, 'tag', req.body.data.tag, this );
+					tag.index( INDEX_NAME, 'tag', requestData.tag, this.parallel() );
+					tag.index( 'fulltext', 'tag', requestData.tag, this.parallel() );
 				},
 				function relateTagRef(){
 					tag.createRelationshipTo( TagReferenceNode, 'MEMBER_OF', {}, this );
 				},
 				function tagSaveComplete(err){
+					console.dir(arguments);
 					if(!err) {
 						res.json( { status: "success", data: 'Tag created you homo' } );
 					} else {

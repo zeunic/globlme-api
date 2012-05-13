@@ -4,7 +4,16 @@
  */
 
 
-var Stream =  function(configOptions){
+ var Search = require('search.js'),
+ 	Step = require('step'),
+	Neo4j = require('neo4j');
+
+ var db;
+
+var Stream =  function(config){
+
+	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
+	console.log('Stream Module connected: '+config.databaseUrl + ':' + config.port);
 
 	return {
 		getStream: function(req, res, next){},
@@ -16,20 +25,31 @@ var Stream =  function(configOptions){
 			var searchFilter = JSON.parse(req.body.data);
 			// { types: ['tags','users'], query: STRING }
 
-			var search = {
-				tag: function(){
-					console.log('search tags');
+			var SearchModule = new Search(searchFilter.query, db);
+
+			Step(
+				function startSearches(){
+					for (var i = -1, j = searchFilter.types.length, queryType; queryType = searchFilter.types[++i], i < j;) {
+						if(SearchModule[queryType]) {
+							SearchModule[queryType]( this.parallel() );
+						} else {
+							console.log('property thingy not working...');
+						}
+					};
 				},
-				user: function(){
-					console.log('search users');
+				function sendResults(){
+					console.dir(arguments);
+
+					var results = [];
+
+					for (var i=0, j=arguments.length; i<j; i++) {
+						results.push(arguments[i]);
+					}
+
+					res.json(results);
+
 				}
-			};
-			for (var i = -1, j = searchFilter.types.length, type; type = searchFilter.types[++i], i < j;) {
-				console.log(type);
-				if(search.type) {
-					search[type]();
-				}
-			};
+			);
 
 		}
 	};

@@ -5,5 +5,5 @@ module.exports = function (configOptions){
 		createMoment: function(req,res,next){
 			console.log(req.body, req.files);
 		}
-	}
+	};
 };
