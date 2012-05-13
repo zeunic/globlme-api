@@ -4,43 +4,38 @@
  */
 
 
- module.exports = function Stream(configOptions){
-
+var Stream =  function(configOptions){
 
 	return {
+		getStream: function(req, res, next){},
+		getNodeById: function(req,res,next){},
+		getNodesByRelationship: function(req,res,next){},
+		updateNode: function(req,res,next){},
+		deleteNode: function(req,res,next){},
+		search: function(req,res,next){
+			var searchFilter = JSON.parse(req.body.data);
+			// { types: ['tags','users'], query: STRING }
 
- 	};
- };
+			var search = {
+				tag: function(){
+					console.log('search tags');
+				},
+				user: function(){
+					console.log('search users');
+				}
+			};
+			for (var i = -1, j = searchFilter.types.length, type; type = searchFilter.types[++i], i < j;) {
+				console.log(type);
+				if(search.type) {
+					search[type]();
+				}
+			};
 
- exports.getStream = function getStream(req,res){
-	console.log('no id OR relationship was passed');
+		}
+	};
 };
 
-exports.getNodeById = function getNodeById(req,res,next) {
-	var id = req.params.id;
-	if(id) {
-		console.log('should get node: ');
-		console.log(req.params);
-	} else {
-		next();
-	}
-};
-
-exports.getNodesByRelationship = function getNodesByRelationship(req,res,next) {
-	var id = req.params.id,
-		relationship = req.params.relationship;
-	if(id && relationship) {
-		console.log('should get both: ');
-		console.log(req.params);
-	} else {
-		next();
-	}
-};
-
-exports.updateNode = function updateNode(req,res) {
-	console.log('updating...');
-	console.log(req.body);
-};
+module.exports = Stream;
 
 exports.createNode = function createNode(req,res) {
 	console.log('should post: ');
@@ -58,9 +53,4 @@ exports.createNode = function createNode(req,res) {
 	// 		else { console.log(uploaded); console.log('now can i get that url back some how?'); }
 	// 	});
 	// });
-};
-
-exports.deleteNode = function deleteNode(req,res) {
-	console.log('should delete: ');
-	console.log(req.body);
 };

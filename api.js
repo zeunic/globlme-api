@@ -86,9 +86,11 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
 // api.put('/:apiVersion/stream', setUpRequest, stream.updateNode);
 // api.post('/:apiVersion/stream', setUpRequest, stream.createNode);
 // api.del('/:apiVersion/stream/:id', setUpRequest, stream.deleteNode);
+api.post('/:apiVersion/stream/search', setUpRequest, TagModule.search);  // TODO: refactor to stream.js
 
-api.post('/:apiVersion/stream/tags/create', setUpRequest, TagModule.createTag);
-api.post('/:apiVersion/stream/tags', setUpRequest, TagModule.getTags);
+
+// tag creation
+api.post('/:apiVersion/stream/tag/create', setUpRequest, TagModule.createTag);
 
 
 // comment here

@@ -16,7 +16,7 @@ var User = function(config) {
 	// or throw appropriate errors
 
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
-	console.log(config.databaseUrl + ':' + config.port);
+	// console.log(config.databaseUrl + ':' + config.port);
 
 	db.query("START n = node(0) MATCH (n) <-[:USERS_REFERENCE]- (user_ref) RETURN user_ref", function(errors, nodes) {
 		if (errors) {
@@ -108,7 +108,7 @@ var User = function(config) {
 					if(!err) {
 						res.json(  { status: "success", data: userData } );
 					} else {
-						res.json( { status: "error", mesage: err } );
+						res.json( { status: "error", message: err } );
 					}
 
 					res.end();
