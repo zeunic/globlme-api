@@ -101,7 +101,7 @@ api.post('/:apiVersion/stream/search', setUpRequest, StreamModule.search);  // T
 api.post('/:apiVersion/tag/create', setUpRequest, TagModule.createTag);
 
 // moment specific routes -> maps to ./routes/moment.js
-api.post('/:apiVersion/moment', setUpRequest, MomentModule.createMoment);
+api.post('/:apiVersion/moment/create',setUpRequest, MomentModule.createMoment);
 
 // user route declarations -> maps to ./routes/user.js
 api.post('/:apiVersion/user/exists', setUpRequest, UserModule.checkUserExists);

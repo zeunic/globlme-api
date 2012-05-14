@@ -27,12 +27,9 @@ var Tag = function(config) {
 
 	return {
 		createTag: function(req,res,next){
-			console.log('so...make you a tag, eh?');
-			console.log(req.body);
 
 			var requestData = JSON.parse(req.body.data);
 			var tag = db.createNode({ tag: requestData.tag });
-			console.log(tag);
 
 			Step(
 				function saveTag(){
