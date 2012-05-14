@@ -14,16 +14,23 @@ var validate = require('./modules/validate.js'),
 	//Images = require('./modules/image.js'),
 	Step = require('step');
 
+
+/**
+* Database Connection / Configuration Settings
+*/
+
 var dbConfig = { port: '7474', databaseUrl: '' };
 dbConfig.databaseUrl = (api.settings.env == "development") ? "http://localhost" : "http://10.179.106.202";
-
 
 // API Modules
 var UserModule = new User(dbConfig),
 	TagModule = new Tag(dbConfig),
 	StreamModule = new Stream(dbConfig);
 	//ImageModule = new Images(),
-	MomentModule = new Moment();
+	MomentModule = new Moment(dbConfig);
+
+
+
 
 
 /**
@@ -47,6 +54,11 @@ api.configure('production', function(){
 	api.use(express.errorHandler());
 });
 
+
+/**
+* Route Control Settings and App Params
+*/
+
 // Route preconditions to set up a valid and authorized request and request data
 var setUpRequest = [validate.validateRequestData, validate.authorizeRequest, validate.defineRequestAction];
 
@@ -59,8 +71,11 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
 	}
 });
 
+
+
+
 /*
- * Route definitions for /stream section of API
+ * API Route Definitions and Mappings
  */
 
 // api.get('/image', function(req,res,next){
@@ -80,26 +95,26 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
 // });
 
 // stream route declarations -> maps to stream.js
-// api.get('/:apiVersion/stream/:id', setUpRequest, stream.getNodesByRelationship);
-// api.get('/:apiVersion/stream/:id', setUpRequest, stream.getNodeById);
-// api.get('/:apiVersion/stream', setUpRequest, stream.getStream);
-// api.put('/:apiVersion/stream', setUpRequest, stream.updateNode);
-// api.post('/:apiVersion/stream', setUpRequest, stream.createNode);
-// api.del('/:apiVersion/stream/:id', setUpRequest, stream.deleteNode);
 api.post('/:apiVersion/stream/search', setUpRequest, StreamModule.search);  // TODO: refactor to stream.js
 
-
-// tag creation
+// tag creation -> maps to ./routes/tags.js
 api.post('/:apiVersion/tag/create', setUpRequest, TagModule.createTag);
 
-
-// comment here
+// moment specific routes -> maps to ./routes/moment.js
 api.post('/:apiVersion/moment', setUpRequest, MomentModule.createMoment);
 
 // user route declarations -> maps to ./routes/user.js
 api.post('/:apiVersion/user/exists', setUpRequest, UserModule.checkUserExists);
 api.post('/:apiVersion/user/auth', setUpRequest, UserModule.authorizeUser);
 api.post('/:apiVersion/user/create', setUpRequest, UserModule.createUser);
+
+
+
+
+/**
+* App Environment / Listen Settings
+*/
+
 
 if (api.settings.env == "development") {
 	api.listen(3000);
