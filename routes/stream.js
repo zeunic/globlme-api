@@ -29,25 +29,15 @@ var Stream =  function(config){
 
 			Step(
 				function startSearches(){
-					for (var i = -1, j = searchFilter.types.length, queryType; queryType = searchFilter.types[++i], i < j;) {
-						if(SearchModule[queryType]) {
-							SearchModule[queryType]( this.parallel() );
-						} else {
-							console.log('property thingy not working...');
+					var group = this.group()
+					searchFilter.types.forEach(function(type){
+						if(SearchModule[type]) {
+							SearchModule[type]( group() );
 						}
-					};
+					});
 				},
-				function sendResults(){
-					console.dir(arguments);
-
-					var results = [];
-
-					for (var i=0, j=arguments.length; i<j; i++) {
-						results.push(arguments[i]);
-					}
-
+				function sendResults(err, results){
 					res.json(results);
-
 				}
 			);
 

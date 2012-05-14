@@ -99,6 +99,7 @@ var User = function(config) {
 				function indexNode(){
 					node.index( INDEX_NAME, 'email', newUser.email, this.parallel() );
 					node.index( INDEX_NAME, 'username', newUser.username, this.parallel() );
+					node.index( 'fulltext', 'username', newUser.username, this.parallel() );
 					if (newUser.fbID) { node.index( INDEX_NAME, 'fbID', newUser.fbID, this.parallel() ); }
 				},
 				function relateUserRef(){
