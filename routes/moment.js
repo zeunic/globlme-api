@@ -1,9 +1,10 @@
 // Module for route handling Moment Creation
 
 var Neo4j = require('neo4j'),
-	Step = require('step');
+	Step = require('step'),
+	Images = require('image');
 
-var MomentReferenceNode;
+var MomentReferenceNode, ImagesModule;
 
 var Moment = function(config){
 
@@ -21,9 +22,27 @@ var Moment = function(config){
 		}
 	});
 
+	ImagesModule = new Images();
+
 	return {
 		createMoment: function(req,res,next){
 			console.log(req.body, req.files);
+
+			// process images and save to CDN, store URLs
+			// once complete create node
+			// once saved, create relationships to moment
+
+			var momentNode = db.createNode();
+
+			Step(
+				function saveNode(){
+					momentNode.save(this);
+				},
+				function relateNode(){
+
+				}
+			);
+
 		}
 	};
 };

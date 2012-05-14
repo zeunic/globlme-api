@@ -55,8 +55,10 @@ var User = function(config) {
 						res.json({ status: 'error', message: 'No user found with those credentials.' });
 					} else if (resultsByFBId) {
 						userData = resultsByFBId._data.data;
+						userData.id = resultsByFBId.id;
 					} else {
 						userData = resultsByEmail._data.data;
+						userData.id = resultsByEmail.id;
 					}
 
 					delete userData.password;
@@ -78,7 +80,7 @@ var User = function(config) {
 
 			var newUser = JSON.parse(req.body.data);
 			var userData = {
-				id: UUID.v1(),
+				guid: UUID.v1(),
 				username: newUser.username,
 				first: newUser.first,
 				last: newUser.last,
@@ -107,6 +109,7 @@ var User = function(config) {
 				},
 				function userSaveComplete(err){
 					if(!err) {
+						userData.id = node.id;
 						res.json(  { status: "success", data: userData } );
 					} else {
 						res.json( { status: "error", message: err } );
@@ -126,6 +129,7 @@ var User = function(config) {
 
 				if(userData.password === credentials.password) {
 					delete userData.password;
+					userData.id = result.id;
 					res.json({ status: 'success', data: userData });
 				} else {
 					res.json({ status: 'error', message: 'Invalid login credentials' });
