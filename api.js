@@ -78,24 +78,11 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
  * API Route Definitions and Mappings
  */
 
-// api.get('/image', function(req,res,next){
-// 	Step(
-// 		function(){
-// 			images.formatImage['convertImageToJpg']('_tmp_images/tebowing.jpg', this);
-// 		},
-// 		function(err, errInfo, imageInfo) {
-// 			console.log('image info obtained and converted if need be...');
-// 			console.dir(arguments);
-// 			images.formatImage['cropSquare'](imageInfo, 0, 0, this);
-// 		}, function(err) {
-// 			console.log('converted image to jpg, then cut a square of it, now ready to poop out thumbs');
-// 			// images.formatImage['saveImageSizes'](originalSourcePath);
-// 		}
-// 	);
-// });
 
 // stream route declarations -> maps to stream.js
 api.post('/:apiVersion/stream/search', setUpRequest, StreamModule.search);  // TODO: refactor to stream.js
+api.post('/:apiVersion/stream/relationships/create/:start', setUpRequest, StreamModule.createRelationship);
+api.post('/:apiVersion/stream/relationships', setUpRequest, StreamModule.searchRelationships);
 
 // tag creation -> maps to ./routes/tags.js
 api.post('/:apiVersion/tag/create', setUpRequest, TagModule.createTag);

@@ -4,11 +4,12 @@
  */
 
 
- var Search = require('search.js'),
- 	Step = require('step'),
+var Search = require('search.js'),
+	SearchRels = require('search-rels.js'),
+	Step = require('step'),
 	Neo4j = require('neo4j');
 
- var db;
+var db;
 
 var Stream =  function(config){
 
@@ -29,7 +30,7 @@ var Stream =  function(config){
 
 			Step(
 				function startSearches(){
-					var group = this.group()
+					var group = this.group();
 					searchFilter.types.forEach(function(type){
 						if(SearchModule[type]) {
 							SearchModule[type]( group() );
@@ -40,27 +41,50 @@ var Stream =  function(config){
 					res.json(results);
 				}
 			);
+		},
+		createRelationship: function(req,res,next){
+			var relData = JSON.parse(req.body.data),
+				fromId = req.param.start,
+				relProperties = relData.data || {};
+
+			Step(
+				function getFromNode(){
+					db.getNodeById(fromId, this.parallel() );
+					db.getNodeById(relData.end, this.parallel() );
+				},
+				function createRel(err, fromNode, toNode) {
+					fromNode.createRelationshipTo(toNode, relData.type, relProperties, this);
+				},
+				function sendResults(err, result){
+					console.log(result);
+					res.json({ status: 'success', data: 'not sure what to put here yet'});
+				}
+			);
+		},
+		seachRelationships: function(req,res,next) {
+			// { type[string], start[nodeId], direction[in|out], data[properties] }
+			var relFilter = JSON.parse(req.body.data);
+
+			var SearchModule = new SearchRels(relFilter.relType, db);
+
+			Step(
+				function startSearches(){
+					var group = this.group();
+					relFilter.types.forEach(function(type){
+						if(SearchModule[type]) {
+							SearchModule[type]( group() );
+						}
+					});
+				},
+				function sendResults(err, results){
+					console.log(err);
+					console.log(results);
+				}
+			);
+
 
 		}
 	};
 };
 
 module.exports = Stream;
-
-exports.createNode = function createNode(req,res) {
-	console.log('should post: ');
-
-	console.log(req.params);
-	console.log(req.body);
-	console.log(req.files);
-
-	// cloudfilesClient.setAuth(function(){
-	// 	cloudfilesClient.addFile('globl.me', {
-	// 		remote: 'userGuid/file_cdn2.png',
-	// 		local: 'stream.png'
-	// 	}, function(err, uploaded){
-	// 		if(err) { console.log(err) }
-	// 		else { console.log(uploaded); console.log('now can i get that url back some how?'); }
-	// 	});
-	// });
-};

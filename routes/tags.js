@@ -27,7 +27,6 @@ var Tag = function(config) {
 
 	return {
 		createTag: function(req,res,next){
-
 			var requestData = JSON.parse(req.body.data);
 			var tag = db.createNode({ tag: requestData.tag });
 
@@ -45,7 +44,7 @@ var Tag = function(config) {
 				function tagSaveComplete(err){
 					console.dir(arguments);
 					if(!err) {
-						res.json( { status: "success", data: 'Tag created you homo' } );
+						res.json( { status: "success", data: { id: tag.id } } );
 					} else {
 						res.json( { status: "error", message: 'Tag not created' } );
 					}
