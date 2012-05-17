@@ -11,6 +11,8 @@ var validate = require('./modules/validate.js'),
 	User = require('./routes/user.js'),
 	Moment = require('./routes/moment.js'),
 	Tag = require('./routes/tags.js'),
+	Adventure = require('adventure.js'),
+	Group = require('group.js'),
 	//Images = require('./modules/image.js'),
 	Step = require('step');
 
@@ -25,12 +27,10 @@ dbConfig.databaseUrl = (api.settings.env == "development") ? "http://localhost" 
 // API Modules
 var UserModule = new User(dbConfig),
 	TagModule = new Tag(dbConfig),
-	StreamModule = new Stream(dbConfig);
-	//ImageModule = new Images(),
-	MomentModule = new Moment(dbConfig);
-
-
-
+	StreamModule = new Stream(dbConfig),
+	MomentModule = new Moment(dbConfig),
+	AdventureModule = new Adventure(dbConfig),
+	GroupModule = new Group(dbConfig);
 
 
 /**
@@ -89,6 +89,9 @@ api.post('/:apiVersion/tag/create', setUpRequest, TagModule.createTag);
 
 // moment specific routes -> maps to ./routes/moment.js
 api.post('/:apiVersion/moment/create',setUpRequest, MomentModule.createMoment);
+
+// moment specific routes -> maps to ./routes/adventure.js
+api.post('/:apiVersion/adventure/create',setUpRequest, AdventureModule.create);
 
 // user route declarations -> maps to ./routes/user.js
 api.post('/:apiVersion/user/exists', setUpRequest, UserModule.checkUserExists);
