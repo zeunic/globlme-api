@@ -61,9 +61,15 @@ var Stream =  function(config){
 				}
 			);
 		},
-		seachRelationships: function(req,res,next) {
-			// { type[string], start[nodeId], direction[in|out], data[properties] }
+		searchRelationships: function(req,res,next) {
+			// { type[string], start[nodeId], direction[in|out], data[properties], relType[string] }
 			var relFilter = JSON.parse(req.body.data);
+
+			console.log(relFilter);
+			console.log(typeof relFilter.types);
+			console.log(relFilter.types.length);
+			console.log(relFilter.types[0]);
+			console.log('/......./');
 
 			var SearchModule = new SearchRels(relFilter.relType, db);
 
@@ -72,13 +78,13 @@ var Stream =  function(config){
 					var group = this.group();
 					relFilter.types.forEach(function(type){
 						if(SearchModule[type]) {
-							SearchModule[type]( group() );
+							SearchModule[type]( relFilter.relType, relFilter.direction, relFilter.startID, group() );
 						}
 					});
 				},
 				function sendResults(err, results){
-					console.log(err);
-					console.log(results);
+					console.log('results back: ');
+					console.dir(arguments);
 				}
 			);
 

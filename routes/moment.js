@@ -14,7 +14,7 @@ var Moment = function(config){
 	db.query("START n = node(0) MATCH (n) <-[:MOMENTS_REFERENCE]- (moment_ref) RETURN moment_ref", function(errors, nodes) {
 		if (errors) {
 			// TODO: throw errors
-			console.log('Unable to locate a valid reference node for users');
+			console.log('Unable to locate a valid reference node for moments');
 			console.log(errors);
 		} else {
 			MomentReferenceNode = nodes[0]['moment_ref'];
