@@ -43,21 +43,27 @@ var Stream =  function(config){
 			);
 		},
 		createRelationship: function(req,res,next){
+			console.log('create rel');
 			var relData = JSON.parse(req.body.data),
-				fromId = req.param.start,
+				fromId = req.params.start,
 				relProperties = relData.data || {};
 
+			console.log('request param: ' + fromId);
+
+			console.log(relData);
+
 			Step(
-				function getFromNode(){
+				function getNodes(){
 					db.getNodeById(fromId, this.parallel() );
 					db.getNodeById(relData.end, this.parallel() );
 				},
 				function createRel(err, fromNode, toNode) {
+					console.dir(arguments);
 					fromNode.createRelationshipTo(toNode, relData.type, relProperties, this);
 				},
 				function sendResults(err, result){
 					console.log(result);
-					res.json({ status: 'success', data: 'not sure what to put here yet'});
+					res.json({ status: 'success', data: 'not sure what to put here yet, do you want the rel id?'});
 				}
 			);
 		},
