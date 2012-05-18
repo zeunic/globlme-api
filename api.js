@@ -93,6 +93,9 @@ api.post('/:apiVersion/moment/create',setUpRequest, MomentModule.createMoment);
 // moment specific routes -> maps to ./routes/adventure.js
 api.post('/:apiVersion/adventure/create',setUpRequest, AdventureModule.create);
 
+// moment specific routes -> maps to ./routes/adventure.js
+api.post('/:apiVersion/group/create',setUpRequest, GroupModule.create);
+
 // user route declarations -> maps to ./routes/user.js
 api.post('/:apiVersion/user/exists', setUpRequest, UserModule.checkUserExists);
 api.post('/:apiVersion/user/auth', setUpRequest, UserModule.authorizeUser);
