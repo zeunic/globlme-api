@@ -106,7 +106,7 @@ api.post('/:apiVersion/user/exists', setUpRequest, UserModule.checkUserExists);
 api.post('/:apiVersion/user/auth', setUpRequest, UserModule.authorizeUser);
 api.post('/:apiVersion/user/create', setUpRequest, UserModule.createUser);
 
-
+api.get('/gremlin', StreamModule.gremlinTest);
 
 
 /**

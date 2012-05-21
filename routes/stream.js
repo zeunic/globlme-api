@@ -4,6 +4,20 @@
  */
 
 
+var request = require('request');
+
+var gremlinOptions = {
+	uri: 'http://10.179.106.202:7474/db/data/ext/GremlinPlugin/graphdb/execute_script',
+	method: 'POST',
+	json: {}
+};
+
+var executeGremlin = function(query, callback) {
+	console.log(query);
+	gremlinOptions.json = { script: query };
+	request(gremlinOptions, callback);
+};
+
 var Search = require('search.js'),
 	SearchRels = require('search-rels.js'),
 	Step = require('step'),
@@ -115,36 +129,46 @@ var Stream =  function(config){
 				console.log(query);
 		},
 		adventures: function(filter, callback){
-			var REL_AND_DIRECTION = '<-[:MEMBER_OF]-',
-				REF_ID = GROUPS_REFERENCE.id,
-				USER_ID = (filter.id) ? filter.id : '';
 
-				query.join('\n')
-					.replace('REL_AND_DIRECTION', REL_AND_DIRECTION)
-					.replace('REF_ID', REF_ID)
-					.replace('USER_ID', USER_ID);
-
-				console.log(query);
 		},
 		moments: function(filter, callback){
-			var REL_AND_DIRECTION = '-[:TAGGED_IN]->',
-				REF_ID = MOMENTS_REFERENCE.id;
+			query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList()] } ";
 
-				var query = [
-					'START n=node(REF_ID)',
-					'MATCH (n) <-[:MEMBER_OF]- (moment) -[:TAGGED_IN]-> (tags)',
-					'RETURN moment, tags'
-				].join('\n')
-					.replace('REL_AND_DIRECTION', REL_AND_DIRECTION)
-					.replace('REF_ID', REF_ID);
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, res, nodes){
+					var momentResults = { type: "moments", data: [] };
 
-				db.query(query, function(errors, results){
-					if(!errors) {
-						callback(null, { type: "moments", data: results });
-					} else {
-						callback('could not retrieve moments from stream');
+					if (nodes.length) {
+						for (var i=0, j=nodes.length; i<j; i++) {
+							var newObj = {},
+								node = nodes[i][0],
+								tags = nodes[i][1];
+
+							var formattedTags =[];
+
+							for(var k=0, l=tags.length; k<l; k++) {
+								var tag = {
+									id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+									title: tags[k].data.tag
+								};
+								formattedTags.push(tag);
+							}
+
+							newObj.node = node.data;
+							newObj.tags = formattedTags;
+							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
+
+							momentResults.data.push(newObj);
+						}
 					}
-				});
+
+					callback(undefined, momentResults);
+
+				}
+			);
 		}
 	};
 
@@ -152,7 +176,6 @@ var Stream =  function(config){
 		getStream: function(req, res, next){
 			var filter = JSON.parse(req.body.data);
 			console.log('getting stream!');
-
 			filter.types = ["moments"]; // lol when you don't figure out this needs removed
 
 			Step(
@@ -160,28 +183,15 @@ var Stream =  function(config){
 					var group = this.group();
 					filter.types.forEach(function(type){
 						if(FilterStream[type]) {
-							FilterStream[type]( filter, group() );
+							FilterStream[type](undefined, group() );
 						}
 					});
 				},
 				function sendResults(err, results){
+					console.log('========/////////////////');
 					console.log('results back: ');
-					var resultsFormatted = [];
-					for (var i=0, j=results[0].data.length; i<j; i++) {
-						var item = results[0].data[i];
-						var newResult = {
-							id: item.moment.id,
-							type: 'moment',
-							title: item.moment._data.data.title,
-							imageUrl: item.moment._data.data.imageUrl,
-							tags: [item.tags._data.data.tag]
-						};
-
-						console.log(newResult);
-
-						resultsFormatted.push(newResult);
-					}
-					res.json(resultsFormatted);
+					console.log(results);
+					res.json({ status: "success", data: results });
 				}
 			);
 
@@ -215,7 +225,7 @@ var Stream =  function(config){
 
 			Step(
 				function getNode() {
-					db.getNodeById(relID, this);
+					db.getRelationshipById(relID, this);
 				},
 				function setNode(err, result){
 					rel = result;
