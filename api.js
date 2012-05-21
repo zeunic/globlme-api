@@ -81,7 +81,7 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
 
 // stream route declarations -> maps to stream.js
 api.post('/:apiVersion/stream', setUpRequest, StreamModule.getStream);
-api.post('/:apiVersion/stream/search', setUpRequest, StreamModule.search);  // TODO: refactor to stream.js
+api.post('/:apiVersion/stream/search', setUpRequest, StreamModule.search);
 api.post('/:apiVersion/stream/relationships/create/:start', setUpRequest, StreamModule.createRelationship);
 api.post('/:apiVersion/stream/relationships', setUpRequest, StreamModule.searchRelationships);
 api.post('/:apiVersion/stream/relationships/edit/:id', setUpRequest, StreamModule.editRelationship);
@@ -105,8 +105,6 @@ api.post('/:apiVersion/group/create',setUpRequest, GroupModule.create);
 api.post('/:apiVersion/user/exists', setUpRequest, UserModule.checkUserExists);
 api.post('/:apiVersion/user/auth', setUpRequest, UserModule.authorizeUser);
 api.post('/:apiVersion/user/create', setUpRequest, UserModule.createUser);
-
-api.get('/gremlin', StreamModule.gremlinTest);
 
 
 /**
