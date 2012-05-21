@@ -92,24 +92,6 @@ var Stream =  function(config){
 
 	var FilterStream = {
 		tags: function(filter, callback){
-			// id, tag, imageUrl
-		// 	{
-		// 		id:
-		// 		title:
-		// 		imageUrl:
-		// 		focusPoint:
-		// 	}
-
-		// 	[ [ [], [] ],
-	  // [ [ [Object] ], [ [Object], [Object] ] ],
-	  // [ [ [Object] ], [ [Object], [Object], [Object], [Object] ] ],
-	  // [ [ [Object] ], [ [Object], [Object], [Object], [Object] ] ],
-	  // [ [ [Object] ], [ [Object] ] ],
-	  // [ [ [Object] ], [ [Object], [Object], [Object], [Object] ] ],
-	  // [ [ [Object] ], [ [Object], [Object], [Object] ] ],
-	  // [ [ [Object] ], [ [Object] ] ] ]
-
-
 			var query = "g.v(0).inE('TAGS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}.dedup";
 
 			Step(
@@ -132,13 +114,9 @@ var Stream =  function(config){
 						tagsResults.push(newObj);
 					}
 
-					callback(undefined, { type: "tags", data: tagsResults});
-
-					// console.log('///////////////////////////////////////// Tags');
-					// console.dir(nodes);
+					callback(undefined, { type: "tags", data: tagsResults.reverse() });
 				}
 			);
-
 		},
 		users: function(filter, callback){
 			// id, node
@@ -149,7 +127,7 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					var usersResults = { type:"users", data: [] };
+					var usersResults = [];
 
 					for(var i=0, j=nodes.length; i<j; i++) {
 						var el = nodes[i];
@@ -160,10 +138,10 @@ var Stream =  function(config){
 
 						delete newObj.node.password;
 
-						usersResults.data.push(newObj);
+						usersResults.push(newObj);
 					}
 
-					callback(undefined, usersResults);
+					callback(undefined, { type:"users", data: usersResults.reverse() });
 				}
 			);
 		},
@@ -177,7 +155,7 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					var groupsResults = { type: "groups", data: [] };
+					var groupsResults = [];
 
 					for(var i=0, j=nodes.length; i<j; i++) {
 						var newObj = {},
@@ -200,16 +178,16 @@ var Stream =  function(config){
 
 						newObj.imageUrl = nodes[i][2][0].data.imageUrl;
 						newObj.focusPoint = nodes[i][2][0].data.focusPoint;
-						groupsResults.data.push(newObj);
+						groupsResults.push(newObj);
 					}
 
-					callback(undefined, groupsResults);
+					callback(undefined, { type: "groups", data: groupsResults.reverse() });
 				}
 			);
 		},
 		adventures: function(filter, callback){
 			// imageUrl, tags, title, id
-			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('ADVENTURES_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it, it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList() ]}";
+			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('ADVENTURES_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList() ]}.dedup";
 
 			Step(
 				function callGremlin(){
@@ -217,7 +195,36 @@ var Stream =  function(config){
 				},
 				function results(err, res, nodes){
 					// console.log('///////////////////////////////////////// Adventures');
-					// console.dir(nodes);
+					console.dir(nodes);
+					nodes.shift(); // fuck me, right?
+					var adventuresResults = [];
+
+					for (var i=0, j=nodes.length; i<j; i++) {
+						var newObj = {},
+							adventure = nodes[i][0][0],
+							moment = nodes[i][1][0],
+							tags = nodes[i][2];
+
+						newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
+						newObj.imageUrl = moment.data.imageUrl;
+						newObj.tags = [];
+
+						for (var k=0, l=tags.length; k<l; k++){
+							console.log(tags[k]);
+							var tag = {
+								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+								title: tags[k].data.tag
+							};
+
+							newObj.tags.push(tag);
+						}
+
+						adventuresResults.push(newObj);
+
+					}
+
+					callback(undefined, { type: "adventures", data: adventuresResults.reverse() });
+
 				}
 			);
 		},
@@ -229,7 +236,7 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					var momentResults = { type: "moments", data: [] };
+					var momentResults = [];
 
 					if (nodes.length) {
 						for (var i=0, j=nodes.length; i<j; i++) {
@@ -251,11 +258,11 @@ var Stream =  function(config){
 							newObj.tags = formattedTags;
 							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
 
-							momentResults.data.push(newObj);
+							momentResults.push(newObj);
 						}
 					}
 
-					callback(undefined, momentResults);
+					callback(undefined, { type: "moments", data: momentResults.reverse() });
 
 				}
 			);
@@ -265,7 +272,7 @@ var Stream =  function(config){
 	return {
 		getStream: function(req, res, next){
 			var filter = JSON.parse(req.body.data);
-			filter.types = ["moments", "groups", "users","tags"]; // lol when you don't figure out this needs removed
+			filter.types = ["moments", "groups", "users","tags", "adventures"]; // lol when you don't figure out this needs removed
 
 			Step(
 				function startSearches(){
@@ -277,8 +284,8 @@ var Stream =  function(config){
 					});
 				},
 				function sendResults(err, results){
-					console.log('results back');
-					console.dir(results);
+					// console.log('results back');
+					// console.dir(results);
 					res.json({ status: "success", data: results });
 				}
 			);
