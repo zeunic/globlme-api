@@ -33,7 +33,7 @@ var Stream =  function(config){
 
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
 	console.log('Stream Module connected: '+config.databaseUrl + ':' + config.port);
-
+	/* I don't think we need these since we switched to Gremlin
 	db.query("START n = node(0) MATCH (n) <-[:USERS_REFERENCE]- (user_ref) RETURN user_ref", function(errors, nodes) {
 		if (errors) {
 			// TODO: throw errors
@@ -88,6 +88,7 @@ var Stream =  function(config){
 			// console.log(UserReferenceNode);
 		}
 	});
+	*/
 
 
 	var FilterStream = {
@@ -114,7 +115,7 @@ var Stream =  function(config){
 						tagsResults.push(newObj);
 					}
 
-					callback(undefined, { type: "tags", data: tagsResults.reverse() });
+					callback(undefined, { type: "tags", data: tagsResults });
 				}
 			);
 		},
@@ -141,7 +142,7 @@ var Stream =  function(config){
 						usersResults.push(newObj);
 					}
 
-					callback(undefined, { type:"users", data: usersResults.reverse() });
+					callback(undefined, { type:"users", data: usersResults });
 				}
 			);
 		},
@@ -181,7 +182,7 @@ var Stream =  function(config){
 						groupsResults.push(newObj);
 					}
 
-					callback(undefined, { type: "groups", data: groupsResults.reverse() });
+					callback(undefined, { type: "groups", data: groupsResults });
 				}
 			);
 		},
@@ -195,7 +196,6 @@ var Stream =  function(config){
 				},
 				function results(err, res, nodes){
 					// console.log('///////////////////////////////////////// Adventures');
-					console.dir(nodes);
 					nodes.shift(); // fuck me, right?
 					var adventuresResults = [];
 
@@ -210,7 +210,6 @@ var Stream =  function(config){
 						newObj.tags = [];
 
 						for (var k=0, l=tags.length; k<l; k++){
-							console.log(tags[k]);
 							var tag = {
 								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
 								title: tags[k].data.tag
@@ -223,7 +222,7 @@ var Stream =  function(config){
 
 					}
 
-					callback(undefined, { type: "adventures", data: adventuresResults.reverse() });
+					callback(undefined, { type: "adventures", data: adventuresResults });
 
 				}
 			);
@@ -262,7 +261,7 @@ var Stream =  function(config){
 						}
 					}
 
-					callback(undefined, { type: "moments", data: momentResults.reverse() });
+					callback(undefined, { type: "moments", data: momentResults });
 
 				}
 			);
@@ -286,6 +285,7 @@ var Stream =  function(config){
 				function sendResults(err, results){
 					// console.log('results back');
 					// console.dir(results);
+					console.log('stream fetch done');
 					res.json({ status: "success", data: results });
 				}
 			);
@@ -449,8 +449,6 @@ var Stream =  function(config){
 				".back(3)"
 				;
 
-			console.log(query);
-
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
@@ -468,6 +466,119 @@ var Stream =  function(config){
 					res.json({ status: "success", data: [ { type: relFilter.type, data: nodes } ] });
 				}
 			);
+		},
+		getAdventure: function(req, res, next){
+
+		},
+		getGroup: function(req,res,next){
+			var groupID = req.params.id;
+
+			var query = "g.v().out('FOLLOWS').out('MEMBER_OF').out('USERS_REFERENCE','TAGS_REFERENCE').back(2).both('CREATED','TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList() ]}".replace('v()', 'v(' + groupID + ')');
+
+			console.log(query);
+
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, response, nodes){
+					// replace('http://10.179.106.202:7474/db/data/node/','');
+					console.dir(nodes);
+
+					var groupResults = [];
+
+					for(var i=0, j=nodes.length; i<j; i++) {
+						var newObj = {},
+							moment = nodes[i][0],
+							tags = nodes[i][1]
+							;
+
+						newObj.id = moment.self.replace('http://10.179.106.202:7474/db/data/node/','');
+						newObj.node = moment.data;
+						newObj.tags = [];
+
+						for(var k=0, l=tags.length; k<l; k++) {
+							var tag = {
+								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+								title: tags[k].data.tag
+							};
+
+							newObj.tags.push(tag);
+						}
+
+						groupResults.push(newObj);
+					}
+
+					console.log(groupResults);
+					res.json({ type: "tags", data: groupResults });
+				}
+			);
+
+		},
+		getTag: function(req,res,next){
+			var tagID = req.params.id;
+
+			var query = "g.v().in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList() ]}".replace('v()', 'v(' + tagID + ')');
+
+			console.log(query);
+
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, response, nodes){
+					var tagResults = [];
+
+					for(var i=0, j=nodes.length; i<j; i++) {
+						var newObj = {},
+							moment = nodes[i][0],
+							tags = nodes[i][1]
+							;
+
+						newObj.id = moment.self.replace('http://10.179.106.202:7474/db/data/node/','');
+						newObj.node = moment.data;
+						newObj.tags = [];
+
+						for(var k=0, l=tags.length; k<l; k++) {
+							var tag = {
+								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+								title: tags[k].data.tag
+							};
+
+							newObj.tags.push(tags);
+						}
+
+						tagResults.push(newObj);
+					}
+
+					console.log(tagResults);
+					res.json({ type: "tags", data: tagResults });
+				}
+			);
+		},
+		getProfile: function(req,res,next){
+			var userID = req.params.id;
+			var query = "g.v().transform{[ it, it.out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').count(), it.out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).in('LIKES').count(), it.outE('FOLLOWS').count(), it.inE('FOLLOWS').count() ]}".replace('v()','v('+userID+')');
+
+			console.log(query);
+
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, response, node){
+					var newObj = {
+						node: node[0],
+						moments: node[1],
+						likes: node[2],
+						following: node[3],
+						followers: node[4]
+					};
+
+					res.json({ status: "success", data: newObj });
+				}
+			);
+
 		}
 	};
 };
