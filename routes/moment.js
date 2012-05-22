@@ -26,19 +26,14 @@ var Moment = function(config){
 
 	return {
 		createMoment: function(req,res,next){
-			console.log(req.body);
-			console.log(req.files);
-
 			var newMoment = JSON.parse(req.body.data);
-			console.log('//////////////////////////');
-			console.log(newMoment);
-			console.log('//////////////////////////');
 
 			var momentData = {
 				title: newMoment.title,
 				date: newMoment.date,
 				focusPoint: newMoment.focusPoint
-			}, momentNode, momentTags, momentUsers, momentImages, momentOwner;
+			}, momentNode, momentTags, momentUsers, momentImages, momentOwner,
+				momentOriginalImage;
 
 			// get all tag nodes so you can create relationships to them
 			// get all user nodes so you can create relationships to them
@@ -58,7 +53,6 @@ var Moment = function(config){
 					}
 				},
 				function storeTags(err, results){
-					console.log('storing tags...');
 					momentTags = results;
 					// console.log(momentTags);
 					return 'tags achieved'; // lol?
@@ -68,7 +62,6 @@ var Moment = function(config){
 				},
 				function saveMomentOwner(err, result){
 					momentOwner = result;
-					console.log('owner: ' + momentOwner.id);
 					return 'moment owner saved';
 				},
 				function getUsers(){
@@ -84,29 +77,23 @@ var Moment = function(config){
 					}
 				},
 				function storeUsers(err, results){
-					console.log('storing users...');
 					momentUsers = results;
 					// console.log(momentUsers);
 					return 'users achieved'; // lol?
 				},
-				function processImage(){
-					console.log('processing image...');
-					console.log(req.files.image.path);
-					console.log(req.files.image.type);
-
-					ImagesModule.convertImageToJpg( req.files.image.path, this.parallel() );
-					ImagesModule.saveImageSizes( req.files.image.path, this.parallel() );
+				function processImageToJpg(){
+					ImagesModule.convertImageToJpg( req.files.image.path, this );
 				},
-				function storeImageUrls(err, originalImage, resizedImages){
-					var userGuid = "000-30234-FA"; // need to get from newMoment.userguid
-
-					// momentNode.imageUrl = images;
-					resizedImages.splice(0,0,originalImage);
+				function processImageSizes(err, originalImage){
+					momentOriginalImage = originalImage;
+					ImagesModule.saveImageSizes( req.files.image.path, this );
+				},
+				function storeImageUrls(err, resizedImages){
+					var userGuid = newMoment.userguid;
+					resizedImages.splice(0,0,momentOriginalImage);
 					ImagesModule.storeImagesToCDN(resizedImages, userGuid, this);
 				},
 				function saveMomentNode(err, results){
-					console.log('save moment node...');
-					console.log(results);
 					momentData.imageUrl = results[0].replace('.jpg','');
 					momentNode = db.createNode(momentData);
 					momentNode.save(this);
@@ -118,34 +105,47 @@ var Moment = function(config){
 					return 'next';
 				},*/
 				function relateNodeOwner(){
-					console.log('owner');
-					console.log(momentOwner);
 					momentOwner.createRelationshipTo(momentNode, 'CREATED', {}, this );
 				},
 				function relateNodeMember(err, result){
-					console.log('member of');
-					console.dir(arguments);
 					momentNode.createRelationshipTo( MomentReferenceNode, 'MEMBER_OF', {}, this );
 				},
 				function relateNodeUsers(){
-					var group = this.group();
 					if(momentUsers.length) {
+						var group = this.group();
 						momentUsers.forEach(function(user){
 							user.createRelationshipTo(momentNode, 'TAGGED_IN', {}, group() );
 						});
+					} else {
+						return 'this';
 					}
 				},
 				function relateNodeTags(){
-					var group = this.group();
-
 					if(momentTags.length) {
+						var group = this.group();
 						momentTags.forEach(function(tag){
 							momentNode.createRelationshipTo(tag, 'TAGGED_IN', {}, group() );
 						});
+					} else {
+						return 'i dont know';
+					}
+				},
+				function getNodeAdventure(){
+					if(newMoment.adventureId) {
+						db.getNodeById(newMoment.adventureId, this);
+					} else {
+						return 'i dont know';
+					}
+				},
+				function relateNodeAdventure(err, result){
+					if(result) {
+						momentNode.createRelationshipTo(result, 'MEMBER_OF', {}, this);
+					} else {
+						return 'i dont know';
 					}
 				},
 				function sendResults(err, results) {
-					// console.log(results);
+					console.log("moment saved!");
 					console.log(momentNode.id);
 					momentData.id = momentNode.id;
 
