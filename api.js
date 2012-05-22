@@ -86,6 +86,13 @@ api.post('/:apiVersion/stream/relationships/create/:start', setUpRequest, Stream
 api.post('/:apiVersion/stream/relationships', setUpRequest, StreamModule.searchRelationships);
 api.post('/:apiVersion/stream/relationships/edit/:id', setUpRequest, StreamModule.editRelationship);
 
+api.post('/:apiVersion/stream/adventure/:id', setUpRequest, StreamModule.getAdventure);
+api.post('/:apiVersion/stream/tag/:id', setUpRequest, StreamModule.getTag);
+api.post('/:apiVersion/stream/group/:id', setUpRequest, StreamModule.getGroup);
+
+api.post('/:apiVersion/stream/profile/:id', setUpRequest, StreamModule.getProfile);
+api.post('/:apiVersion/stream/user/:id', setUpRequest, StreamModule.getUserStream);
+
 api.post('/:apiVersion/node/delete/:id', setUpRequest, StreamModule.deleteNode);
 api.post('/:apiVersion/relationship/delete/:id', setUpRequest, StreamModule.deleteRelationship);
 

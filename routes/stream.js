@@ -268,6 +268,92 @@ var Stream =  function(config){
 		}
 	};
 
+	var FilterUserStream = {
+		moments: function(userID, callback){
+
+			var query = "g.v().out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[it, it.out('TAGGED_IN').toList()]}".replace('v()','v('+userID+')');
+
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, res, nodes){
+					var momentResults = [];
+
+					if (nodes.length) {
+						for (var i=0, j=nodes.length; i<j; i++) {
+							var newObj = {},
+								node = nodes[i][0],
+								tags = nodes[i][1];
+
+							var formattedTags =[];
+
+							for(var k=0, l=tags.length; k<l; k++) {
+								var tag = {
+									id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+									title: tags[k].data.tag
+								};
+								formattedTags.push(tag);
+							}
+
+							newObj.node = node.data;
+							newObj.tags = formattedTags;
+							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
+
+							momentResults.push(newObj);
+						}
+					}
+
+					callback(undefined, { type: "moments", data: momentResults });
+
+				}
+			);
+		},
+		adventures: function(userID, callback){
+			// var query2 = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('ADVENTURES_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList() ]}.dedup";
+
+			var query = "g.v().out('CREATED','MEMBER_OF').out('MEMBER_OF').out('ADVENTURES_REFERENCE').back(2).transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList() ]}.dedup".replace('v()','v('+userID+')');
+
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, res, nodes){
+					// console.log('///////////////////////////////////////// Adventures');
+					nodes.shift(); // fuck me, right?
+					var adventuresResults = [];
+
+					for (var i=0, j=nodes.length; i<j; i++) {
+						var newObj = {},
+							adventure = nodes[i][0][0],
+							moment = nodes[i][1][0],
+							tags = nodes[i][2];
+
+						newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
+						newObj.imageUrl = moment.data.imageUrl;
+						newObj.tags = [];
+
+						for (var k=0, l=tags.length; k<l; k++){
+							var tag = {
+								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+								title: tags[k].data.tag
+							};
+
+							newObj.tags.push(tag);
+						}
+
+						adventuresResults.push(newObj);
+
+					}
+
+					callback(undefined, { type: "adventures", data: adventuresResults });
+				}
+			);
+		},
+		groups: function(userID, callback){
+		}
+	};
+
 	return {
 		getStream: function(req, res, next){
 			var filter = JSON.parse(req.body.data);
@@ -468,10 +554,49 @@ var Stream =  function(config){
 			);
 		},
 		getAdventure: function(req, res, next){
+			var advID = req.params.id;
 
+			console.log(req.body);
+
+			var query = "g.v().in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').toList() ]}".replace('v()','v('+advID+')');
+
+			console.log(query);
+
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function result(err, response, nodes){
+					var adventuresResults = [];
+
+					for(var i=0, j=nodes.length; i<j; i++) {
+						var newObj = {},
+							moment = nodes[i][0],
+							tags = nodes[i][1];
+
+						newObj.id = moment.self.replace('http://10.179.106.202:7474/db/data/node/','');
+						newObj.node = moment.data;
+						newObj.tags = [];
+
+						for(var k=0, l=tags.length; k<l; k++) {
+							var tag = {
+								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+								title: tags[k].data.tag
+							};
+
+							newObj.tags.push(tag);
+						}
+
+						adventuresResults.push(newObj);
+					}
+					res.json({ status:"success", data: [ { type: "moments", data: adventuresResults } ]});
+				}
+			);
 		},
 		getGroup: function(req,res,next){
 			var groupID = req.params.id;
+
+			console.log(req.body);
 
 			var query = "g.v().out('FOLLOWS').out('MEMBER_OF').out('USERS_REFERENCE','TAGS_REFERENCE').back(2).both('CREATED','TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList() ]}".replace('v()', 'v(' + groupID + ')');
 
@@ -483,7 +608,6 @@ var Stream =  function(config){
 				},
 				function results(err, response, nodes){
 					// replace('http://10.179.106.202:7474/db/data/node/','');
-					console.dir(nodes);
 
 					var groupResults = [];
 
@@ -509,14 +633,14 @@ var Stream =  function(config){
 						groupResults.push(newObj);
 					}
 
-					console.log(groupResults);
-					res.json({ type: "tags", data: groupResults });
+					res.json({ status:"success", data: [ { type: "moments", data: groupResults } ]});
 				}
 			);
-
 		},
 		getTag: function(req,res,next){
 			var tagID = req.params.id;
+
+			console.log(req.body);
 
 			var query = "g.v().in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList() ]}".replace('v()', 'v(' + tagID + ')');
 
@@ -545,40 +669,54 @@ var Stream =  function(config){
 								title: tags[k].data.tag
 							};
 
-							newObj.tags.push(tags);
+							newObj.tags.push(tag);
 						}
 
 						tagResults.push(newObj);
 					}
 
-					console.log(tagResults);
-					res.json({ type: "tags", data: tagResults });
+					res.json({ status:"success", data: [ { type: "moments", data: tagResults } ]});
 				}
 			);
 		},
 		getProfile: function(req,res,next){
 			var userID = req.params.id;
-			var query = "g.v().transform{[ it, it.out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').count(), it.out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).in('LIKES').count(), it.outE('FOLLOWS').count(), it.inE('FOLLOWS').count() ]}".replace('v()','v('+userID+')');
 
-			console.log(query);
+			var query = "g.v().transform{[ it, it.out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').count(), it.out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).in('LIKES').count(), it.outE('FOLLOWS').count(), it.inE('FOLLOWS').count() ]}".replace('v()','v('+userID+')');
 
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
 				},
 				function results(err, response, node){
+					console.log(node);
 					var newObj = {
-						node: node[0],
-						moments: node[1],
-						likes: node[2],
-						following: node[3],
-						followers: node[4]
+						node: node[0][0].data,
+						moments: node[0][1],
+						likes: node[0][2],
+						following: node[0][3],
+						followers: node[0][4]
 					};
 
-					res.json({ status: "success", data: newObj });
+					delete newObj.node.password;
+
+					res.json({ status: "success", data: { type: "profile", data: newObj } });
 				}
 			);
+		},
+		getUserStream: function(req,res,next){
+			var userID = req.params.id;
 
+			Step(
+				function getUserStreams(){
+					FilterUserStream.moments(userID, this.parallel() );
+					FilterUserStream.adventures(userID, this.parallel() );
+				},
+				function results(err, moments, adventures) {
+					console.log('user stream: ');
+					res.json({ status: "success", data: [moments, adventures] });
+				}
+			);
 		}
 	};
 };
