@@ -32,7 +32,6 @@ var db,
 var Stream =  function(config){
 
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
-	console.log('Stream Module connected: '+config.databaseUrl + ':' + config.port);
 
 	// takes any number of objects and merges them in to one object
 	// last object in will overwrite previous object keys

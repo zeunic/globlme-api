@@ -12,16 +12,12 @@ var Tag = function(config) {
 	// or throw appropriate errors
 
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
-	console.log('Tag Module connected: '+config.databaseUrl + ':' + config.port);
 
 	db.query("START n = node(0) MATCH (n) <-[:TAGS_REFERENCE]- (tag_ref) RETURN tag_ref", function(errors, nodes) {
 		if (errors) {
 			// TODO: throw errors
-			console.log('Unable to locate a valid reference node for tags');
-			console.log(errors);
 		} else {
 			TagReferenceNode = nodes[0]['tag_ref'];
-			// console.log(TagReferenceNode);
 		}
 	});
 
@@ -42,7 +38,6 @@ var Tag = function(config) {
 					tag.createRelationshipTo( TagReferenceNode, 'MEMBER_OF', {}, this );
 				},
 				function tagSaveComplete(err){
-					console.dir(arguments);
 					if(!err) {
 						res.json( { status: "success", data: { id: tag.id } } );
 					} else {
