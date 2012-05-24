@@ -119,7 +119,7 @@ api.post('/:apiVersion/group/create',setUpRequest, GroupModule.create);
 api.post('/:apiVersion/user/exists', setUpRequest, UserModule.checkUserExists);
 api.post('/:apiVersion/user/auth', setUpRequest, UserModule.authorizeUser);
 api.post('/:apiVersion/user/create', setUpRequest, UserModule.createUser);
-api.post('/:apiVersion/user/updatePhoto/', setUpRequest, UserModule.updatePhoto);
+api.post('/:apiVersion/user/updatePhoto', setUpRequest, UserModule.updatePhoto);
 
 
 /**

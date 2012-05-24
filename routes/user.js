@@ -1,6 +1,4 @@
 // user.js routes
-
-
 var request = require('request');
 
 var gremlinOptions = {
@@ -158,7 +156,7 @@ var User = function(config) {
 
 			Step(
 				function getUserNode(){
-					db.getNodeById(requestData.id, this);
+					db.getNodeById(requestData.userid, this);
 				},
 				function storeUserNode(err, result) {
 					if (err) res.json({ status: "err", message: err });
@@ -184,11 +182,11 @@ var User = function(config) {
 						ImagesModule.storeImagesToCDN(resizedImages, requestData.userguid, this);
 					}
 				},
-				function saveMomentNode(err, results){
+				function saveUserNode(err, results){
 					if (err) {
 						res.json({ status: "err", message: err });
 					} else {
-						userNode.data.imageUrl = results[0].replace('.jpg','');
+						userNode.data.photo = results[0].replace('.jpg','');
 						userNode.save(this);
 					}
 				},
@@ -198,7 +196,7 @@ var User = function(config) {
 					} else {
 						res.json({
 							status: "success",
-							data: userNode.data.imageUrl
+							data: userNode.data.photo
 						});
 					}
 				}
