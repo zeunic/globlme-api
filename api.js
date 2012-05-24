@@ -18,7 +18,8 @@ var validate = require('./modules/validate.js'),
 	Adventure = require('adventure.js'),
 	Group = require('group.js'),
 	//Images = require('./modules/image.js'),
-	Step = require('step');
+	Step = require('step'),
+	email = require('mailer');
 
 
 /**
@@ -124,6 +125,28 @@ api.post('/:apiVersion/user/exists', setUpRequest, UserModule.checkUserExists);
 api.post('/:apiVersion/user/auth', setUpRequest, UserModule.authorizeUser);
 api.post('/:apiVersion/user/create', setUpRequest, UserModule.createUser);
 api.post('/:apiVersion/user/updatePhoto', setUpRequest, UserModule.updatePhoto);
+
+
+
+api.post('/:apiVersion/feedback', setUpRequest, function(req, res, next){
+	var feedback = req.body.data.text;
+
+	var server = email.server.connect({
+		user: "social@zeunic.com",
+		password: "s4p@venue",
+		host: "smtp.gmail.com"
+	});
+
+	server.send({
+		text: feedback,
+		from: "Feedback <social@zeunic.com>",
+		to: "Zeunic <social@zeunic.com>",
+		subject: "Globl.me Feedback"
+	}, function(err, message){
+		console.log(err || message);
+	});
+
+});
 
 
 /**
