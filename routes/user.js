@@ -1,11 +1,28 @@
 // user.js routes
 
+
+var request = require('request');
+
+var gremlinOptions = {
+	uri: 'http://10.179.106.202:7474/db/data/ext/GremlinPlugin/graphdb/execute_script',
+	method: 'POST',
+	json: {}
+};
+
+var executeGremlin = function(query, callback) {
+	gremlinOptions.json = { script: query };
+	request(gremlinOptions, callback);
+};
+
+
 // util objects & libs
 var Neo4j = require('neo4j'),
 	UUID = require('node-uuid'),
 	Step = require('step'),
+	Images = require('image'),
 	db,
-	UserReferenceNode;
+	UserReferenceNode,
+	ImagesModule;
 
 // CONSTANTS
 var INDEX_NAME = "user";
@@ -15,17 +32,15 @@ var User = function(config) {
 	// gracefully set up default config values if none are passed in
 	// or throw appropriate errors
 
+	ImagesModule = new Images();
+
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
-	console.log('User Module connected: '+config.databaseUrl + ':' + config.port);
 
 	db.query("START n = node(0) MATCH (n) <-[:USERS_REFERENCE]- (user_ref) RETURN user_ref", function(errors, nodes) {
 		if (errors) {
 			// TODO: throw errors
-			console.log('Unable to locate a valid reference node for users');
-			console.log(errors);
 		} else {
 			UserReferenceNode = nodes[0]['user_ref'];
-			// console.log(UserReferenceNode);
 		}
 	});
 
@@ -136,6 +151,59 @@ var User = function(config) {
 				}
 
 			});
+		},
+		updatePhoto: function(req,res,next){
+			var requestData = JSON.parse(req.body.data),
+				userNode, image;
+
+			Step(
+				function getUserNode(){
+					db.getNodeById(requestData.id, this);
+				},
+				function storeUserNode(err, result) {
+					if (err) res.json({ status: "err", message: err });
+					userNode = result;
+					return 'next';
+				},
+				function processImageToJpg(){
+					ImagesModule.convertImageToJpg( req.files.image.path, this );
+				},
+				function processImageSizes(err, originalImage){
+					if (err) {
+						res.json({ status: "err", message: err });
+					} else {
+						userOriginalImage = originalImage;
+						ImagesModule.saveImageSizes( req.files.image.path, this );
+					}
+				},
+				function storeImageUrls(err, resizedImages){
+					if (err) {
+						res.json({ status: "err", message: err });
+					} else {
+						resizedImages.splice(0,0,userOriginalImage);
+						ImagesModule.storeImagesToCDN(resizedImages, requestData.userguid, this);
+					}
+				},
+				function saveMomentNode(err, results){
+					if (err) {
+						res.json({ status: "err", message: err });
+					} else {
+						userNode.data.imageUrl = results[0].replace('.jpg','');
+						userNode.save(this);
+					}
+				},
+				function sendResults(err, results) {
+					if (err) {
+						res.json({ status: "err", message: err });
+					} else {
+						res.json({
+							status: "success",
+							data: userNode.data.imageUrl
+						});
+					}
+				}
+			);
+
 		}
 	};
 };

@@ -9,16 +9,12 @@ var MomentReferenceNode, ImagesModule;
 var Moment = function(config){
 
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
-	console.log('Moment Module connected: '+config.databaseUrl + ':' + config.port);
 
 	db.query("START n = node(0) MATCH (n) <-[:MOMENTS_REFERENCE]- (moment_ref) RETURN moment_ref", function(errors, nodes) {
 		if (errors) {
 			// TODO: throw errors
-			console.log('Unable to locate a valid reference node for moments');
-			console.log(errors);
 		} else {
 			MomentReferenceNode = nodes[0]['moment_ref'];
-			// console.log(MomentReferenceNode);
 		}
 	});
 
@@ -48,7 +44,6 @@ var Moment = function(config){
 				},
 				function storeTags(err, results){
 					momentTags = results;
-					// console.log(momentTags);
 					return 'tags achieved'; // lol?
 				},
 				function getMomentOwner(){
@@ -59,7 +54,6 @@ var Moment = function(config){
 					return 'moment owner saved';
 				},
 				function getUsers(){
-					console.log('getting users...');
 					var group = this.group();
 
 					if(newMoment.users.length) {
@@ -72,7 +66,6 @@ var Moment = function(config){
 				},
 				function storeUsers(err, results){
 					momentUsers = results;
-					// console.log(momentUsers);
 					return 'users achieved'; // lol?
 				},
 				function processImageToJpg(){
@@ -91,13 +84,7 @@ var Moment = function(config){
 					momentData.imageUrl = results[0].replace('.jpg','');
 					momentNode = db.createNode(momentData);
 					momentNode.save(this);
-				},/*
-				function indexNode(err, result){
-					// not using indexes for moments currently
-					console.log('indexes?');
-					console.dir(arguments);
-					return 'next';
-				},*/
+				},
 				function relateNodeOwner(){
 					momentOwner.createRelationshipTo(momentNode, 'CREATED', {}, this );
 				},
@@ -133,17 +120,12 @@ var Moment = function(config){
 				},
 				function relateNodeAdventure(err, result){
 					if(result) {
-						console.log('adventure found: ');
-						console.log(result);
 						momentNode.createRelationshipTo(result, 'MEMBER_OF', {}, this);
 					} else {
 						return 'i dont know';
 					}
 				},
 				function sendResults(err, results) {
-					console.log("moment saved!");
-					console.log(momentNode.id);
-					console.log(results);
 					momentData.id = momentNode.id;
 
 					res.json({ status: 'success', data: momentData });
