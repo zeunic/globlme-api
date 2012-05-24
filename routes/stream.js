@@ -86,8 +86,6 @@ var Stream =  function(config){
 		tags: function(userID, filter, callback){
 			var query = "g.v("+userID+").out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).transform{[ it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}.dedup";
 
-			console.log(query);
-
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
@@ -116,8 +114,6 @@ var Stream =  function(config){
 		users: function(userID, filter, callback){
 			// id, node
 			var query = "g.v("+userID+").out('FOLLOWS').out('MEMBER_OF').out('USERS_REFERENCE').back(2).hasNot('photo', null)";
-
-			console.log(query);
 
 			Step(
 				function callGremlin(){
@@ -532,12 +528,8 @@ var Stream =  function(config){
 			);
 		},
 		updateNode: function(req,res,next){
-			//var node = JSON.parse(req.body.data),
-			var nodeObj;
-
-			var update = {
-				username: "bigmoney"
-			};
+			var node = JSON.parse(req.body.data),
+				nodeObj;
 
 			Step(
 				function getObject(){
@@ -545,7 +537,7 @@ var Stream =  function(config){
 				},
 				function updateObjectData(err, result) {
 					nodeObj = result;
-					objectMerge([result._data.data, update], this);
+					objectMerge([result._data.data, node.properties], this);
 				},
 				function saveNode(err, result) {
 					nodeObj._data.data = result;
@@ -558,12 +550,8 @@ var Stream =  function(config){
 			);
 		},
 		updateRelationship: function(req,res,next){
-			//var node = JSON.parse(req.body.data),
-			var relObj;
-
-			var update = {
-				amount: "5"
-			};
+			var node = JSON.parse(req.body.data),
+				relObj;
 
 			Step(
 				function getObject(){
@@ -571,14 +559,14 @@ var Stream =  function(config){
 				},
 				function updateObjectData(err, result) {
 					relObj = result;
-					objectMerge([result._data.data, update], this);
+					objectMerge([result._data.data, node.properties], this);
 				},
 				function saveNode(err, result) {
 					relObj._data.data = result;
 					relObj.save(this);
 				},
 				function sendResults(err, result) {
-					res.json({status: "success", data: relObj.data });
+					res.json({status: "success", data: relObj._data.data });
 				}
 			);
 		},
@@ -659,7 +647,7 @@ var Stream =  function(config){
 				},
 				function sendResults(err, result){
 					if(result._data && result._data.self) {
-						res.json({ status: 'success', data: result._data.self.replace('http://10.179.106.202:7474/db/data/relationship','') });
+						res.json({ status: 'success', data: result._data.self.replace('http://10.179.106.202:7474/db/data/relationship/','') });
 					} else {
 						res.json({status: 'error', message: 'go away' });
 					}

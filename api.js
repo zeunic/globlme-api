@@ -2,6 +2,10 @@
 * Module dependencies.
 */
 
+process.on('uncaughtException', function (err) {
+  console.log('Caught exception: ' + err);
+});
+
 var express = require('express'),
 	format = require('util').format,
 	api = module.exports = express.createServer();
