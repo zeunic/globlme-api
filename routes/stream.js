@@ -33,74 +33,67 @@ var Stream =  function(config){
 
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
 	console.log('Stream Module connected: '+config.databaseUrl + ':' + config.port);
-	/* I don't think we need these since we switched to Gremlin
-	db.query("START n = node(0) MATCH (n) <-[:USERS_REFERENCE]- (user_ref) RETURN user_ref", function(errors, nodes) {
-		if (errors) {
-			// TODO: throw errors
-			console.log('Unable to locate a valid reference node for users');
-			console.log(errors);
-		} else {
-			USERS_REFERENCE = nodes[0]['user_ref'];
-			// console.log(UserReferenceNode);
+
+	// takes any number of objects and merges them in to one object
+	// last object in will overwrite previous object keys
+	// not recursive, use with caution; exectues callback and returns new object
+	var objectMerge = function(objects, callback){
+		var out = {};
+		if(!objects.length)
+			return out;
+		for(var i=0; i<objects.length; i++) {
+			for(var key in objects[i]){
+				out[key] = objects[i][key];
+			}
 		}
-	});
+		callback(undefined, out);
+	};
 
-	db.query("START n = node(0) MATCH (n) <-[:TAGS_REFERENCE]- (tag_ref) RETURN tag_ref", function(errors, nodes) {
-		if (errors) {
-			// TODO: throw errors
-			console.log('Unable to locate a valid reference node for tags');
-			console.log(errors);
-		} else {
-			TAGS_REFERENCE = nodes[0]['tag_ref'];
-			// console.log(UserReferenceNode);
+	var formatGroups = function(nodes) {
+		var groupsResults = [];
+		for(var i=0, j=nodes.length; i<j; i++) {
+			var newObj = {},
+				tags = nodes[i][1],
+				group = nodes[i][0],
+				moment = nodes[i][2][0];
+
+			if(group && tags && moment) {
+				newObj.title = group.data.title;
+				newObj.node = group.data;
+				newObj.id = group.self.replace('http://10.179.106.202:7474/db/data/node/','');
+
+				newObj.tags = [];
+
+				for (var k=0, l=tags.length; k<l; k++) {
+					var el = tags[k];
+
+					var tag = {
+						id: el.self.replace('http://10.179.106.202:7474/db/data/node/',''),
+						title: el.data.tag
+					};
+					newObj.tags.push(tag);
+				}
+
+				newObj.imageUrl = moment.data.imageUrl;
+				newObj.focusPoint = moment.data.focusPoint;
+				groupsResults.push(newObj);
+
+			}
 		}
-	});
+		return groupsResults;
+	};
 
-	db.query("START n = node(0) MATCH (n) <-[:COLLECTIONS_REFERENCE]- () <-[:GROUPS_REFERENCE]- (group_ref) RETURN group_ref", function(errors, nodes) {
-		if (errors) {
-			// TODO: throw errors
-			console.log('Unable to locate a valid reference node for groups');
-			console.log(errors);
-		} else {
-			GROUPS_REFERENCE = nodes[0]['group_ref'];
-			// console.log(UserReferenceNode);
-		}
-	});
+	var FilterMeStream = {
+		tags: function(userID, filter, callback){
+			var query = "g.v("+userID+").out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).transform{[ it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}.dedup";
 
-	db.query("START n = node(0) MATCH (n) <-[:COLLECTIONS_REFERENCE]- () <-[:ADVENTURES_REFERENCE]- (adv_ref) RETURN adv_ref", function(errors, nodes) {
-		if (errors) {
-			// TODO: throw errors
-			console.log('Unable to locate a valid reference node for adventures');
-			console.log(errors);
-		} else {
-			ADVENTURES_REFERENCE = nodes[0]['adv_ref'];
-			// console.log(UserReferenceNode);
-		}
-	});
-
-	db.query("START n = node(0) MATCH (n) <-[:MOMENTS_REFERENCE]- (moment_ref) RETURN moment_ref", function(errors, nodes) {
-		if (errors) {
-			// TODO: throw errors
-			console.log('Unable to locate a valid reference node for moments');
-			console.log(errors);
-		} else {
-			MOMENTS_REFERENCE = nodes[0]['moment_ref'];
-			// console.log(UserReferenceNode);
-		}
-	});
-	*/
-
-
-	var FilterStream = {
-		tags: function(filter, callback){
-			var query = "g.v(0).inE('TAGS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}.dedup";
+			console.log(query);
 
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					nodes.shift(); // removing the first item might not actually or always work but for now...
 					var tagsResults = [];
 					for(var i=0, j=nodes.length; i<j; i++) {
 						var tag = nodes[i][0][0],
@@ -115,13 +108,17 @@ var Stream =  function(config){
 						tagsResults.push(newObj);
 					}
 
+					tagsResults.reverse();
+
 					callback(undefined, { type: "tags", data: tagsResults });
 				}
 			);
 		},
-		users: function(filter, callback){
+		users: function(userID, filter, callback){
 			// id, node
-			var query = "g.v(0).inE('USERS_REFERENCE').outV.inE('MEMBER_OF').outV";
+			var query = "g.v("+userID+").out('FOLLOWS').out('MEMBER_OF').out('USERS_REFERENCE').back(2).hasNot('photo', null)";
+
+			console.log(query);
 
 			Step(
 				function callGremlin(){
@@ -146,43 +143,18 @@ var Stream =  function(config){
 				}
 			);
 		},
-		groups: function(filter, callback){
+		groups: function(userID, filter, callback){
 			// imageUrl, tags, title, id
 
-			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('GROUPS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[it, it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList(), it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}";
+			var query = "g.v("+userID+").out('FOLLOWS').out('MEMBER_OF').out('GROUPS_REFERENCE').back(2).transform{[it, it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList(), it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}";
 
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					var groupsResults = [];
-
-					for(var i=0, j=nodes.length; i<j; i++) {
-						var newObj = {},
-							tags = nodes[i][1];
-
-						newObj.title = nodes[i][0].data.title;
-						newObj.node = nodes[i][0].data;
-						newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
-						newObj.tags = [];
-
-						for (var k=0, l=tags.length; k<l; k++) {
-							var el = tags[k];
-
-							var tag = {
-								id: el.self.replace('http://10.179.106.202:7474/db/data/node/',''),
-								title: el.data.tag
-							};
-							newObj.tags.push(tag);
-						}
-
-						newObj.imageUrl = nodes[i][2][0].data.imageUrl;
-						newObj.focusPoint = nodes[i][2][0].data.focusPoint;
-						groupsResults.push(newObj);
-					}
-
-					callback(undefined, { type: "groups", data: groupsResults });
+					var groupsResults = formatGroups(nodes);
+					callback(undefined, { type: "groups", data: groupsResults.reverse() });
 				}
 			);
 		},
@@ -228,7 +200,7 @@ var Stream =  function(config){
 			);
 		},
 		moments: function(filter, callback){
-			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList()] } ";
+			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList()] }";
 
 			Step(
 				function callGremlin(){
@@ -261,16 +233,169 @@ var Stream =  function(config){
 						}
 					}
 
-					callback(undefined, { type: "moments", data: momentResults });
+					callback(undefined, { type: "moments", data: momentResults.reverse() });
 
 				}
 			);
 		}
 	};
 
-	var FilterUserStream = {
-		moments: function(userID, callback){
+	var FilterStream = {
+		tags: function(filter, callback){
+			var query = "g.v(0).inE('TAGS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}.dedup";
 
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, res, nodes){
+					nodes.shift(); // removing the first item might not actually or always work but for now...
+					var tagsResults = [];
+					for(var i=0, j=nodes.length; i<j; i++) {
+						var tag = nodes[i][0][0],
+							moment = nodes[i][1][0];
+
+						var newObj = {
+							id: tag.self.replace('http://10.179.106.202:7474/db/data/node/',''),
+							title: tag.data.tag,
+							imageUrl: moment.data.imageUrl,
+							focusPoint: moment.data.focusPoint
+						};
+						tagsResults.push(newObj);
+					}
+
+					tagsResults.reverse();
+
+					callback(undefined, { type: "tags", data: tagsResults });
+				}
+			);
+		},
+		users: function(filter, callback){
+			// id, node
+			var query = "g.v(0).inE('USERS_REFERENCE').outV.inE('MEMBER_OF').outV.hasNot('photo', null)";
+
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, res, nodes){
+					var usersResults = [];
+
+					for(var i=0, j=nodes.length; i<j; i++) {
+						var el = nodes[i];
+						var newObj = {
+							id: el.self.replace('http://10.179.106.202:7474/db/data/node/',''),
+							node: el.data
+						};
+
+						delete newObj.node.password;
+
+						usersResults.push(newObj);
+					}
+
+					callback(undefined, { type:"users", data: usersResults });
+				}
+			);
+		},
+		groups: function(filter, callback){
+			// imageUrl, tags, title, id
+
+			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('GROUPS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[it, it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList(), it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}";
+
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, res, nodes){
+					var groupsResults = formatGroups(nodes);
+					callback(undefined, { type: "groups", data: groupsResults.reverse() });
+				}
+			);
+		},
+		adventures: function(filter, callback){
+			// imageUrl, tags, title, id
+			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('ADVENTURES_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList() ]}.dedup";
+
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, res, nodes){
+					nodes.shift(); // fuck me, right?
+					var adventuresResults = [];
+
+					for (var i=0, j=nodes.length; i<j; i++) {
+						var newObj = {},
+							adventure = nodes[i][0][0],
+							moment = nodes[i][1][0],
+							tags = nodes[i][2];
+
+						newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
+						newObj.imageUrl = moment.data.imageUrl;
+						newObj.tags = [];
+
+						for (var k=0, l=tags.length; k<l; k++){
+							var tag = {
+								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+								title: tags[k].data.tag
+							};
+
+							newObj.tags.push(tag);
+						}
+
+						adventuresResults.push(newObj);
+
+					}
+					adventuresResults.reverse();
+
+					callback(undefined, { type: "adventures", data: adventuresResults });
+
+				}
+			);
+		},
+		moments: function(filter, callback){
+			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList()] }";
+
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, res, nodes){
+					var momentResults = [];
+
+					if (nodes.length) {
+						for (var i=0, j=nodes.length; i<j; i++) {
+							var newObj = {},
+								node = nodes[i][0],
+								tags = nodes[i][1];
+
+							var formattedTags =[];
+
+							for(var k=0, l=tags.length; k<l; k++) {
+								var tag = {
+									id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+									title: tags[k].data.tag
+								};
+								formattedTags.push(tag);
+							}
+
+							newObj.node = node.data;
+							newObj.tags = formattedTags;
+							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
+
+							momentResults.push(newObj);
+						}
+					}
+
+					callback(undefined, { type: "moments", data: momentResults.reverse() });
+
+				}
+			);
+		}
+	};
+
+	var FilterProfileStream = {
+		moments: function(userID, callback){
 			var query = "g.v().out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[it, it.out('TAGGED_IN').toList()]}".replace('v()','v('+userID+')');
 
 			Step(
@@ -304,14 +429,14 @@ var Stream =  function(config){
 						}
 					}
 
+					momentResults.reverse();
+
 					callback(undefined, { type: "moments", data: momentResults });
 
 				}
 			);
 		},
 		adventures: function(userID, callback){
-			// var query2 = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('ADVENTURES_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList() ]}.dedup";
-
 			var query = "g.v().out('CREATED','MEMBER_OF').out('MEMBER_OF').out('ADVENTURES_REFERENCE').back(2).transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList() ]}.dedup".replace('v()','v('+userID+')');
 
 			Step(
@@ -319,8 +444,7 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					// console.log('///////////////////////////////////////// Adventures');
-					nodes.shift(); // fuck me, right?
+					// nodes.pop(); // fuck me, right?
 					var adventuresResults = [];
 
 					for (var i=0, j=nodes.length; i<j; i++) {
@@ -329,28 +453,43 @@ var Stream =  function(config){
 							moment = nodes[i][1][0],
 							tags = nodes[i][2];
 
-						newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
-						newObj.imageUrl = moment.data.imageUrl;
-						newObj.tags = [];
+						if(adventure && moment && tags) {
+							newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
+							newObj.imageUrl = moment.data.imageUrl;
+							newObj.tags = [];
 
-						for (var k=0, l=tags.length; k<l; k++){
-							var tag = {
-								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
-								title: tags[k].data.tag
-							};
+							for (var k=0, l=tags.length; k<l; k++){
+								var tag = {
+									id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+									title: tags[k].data.tag
+								};
 
-							newObj.tags.push(tag);
+								newObj.tags.push(tag);
+							}
+
+							adventuresResults.push(newObj);
 						}
 
-						adventuresResults.push(newObj);
-
 					}
+
+					adventuresResults.reverse();
 
 					callback(undefined, { type: "adventures", data: adventuresResults });
 				}
 			);
 		},
 		groups: function(userID, callback){
+			var query = "g.v("+userID+").out('CREATED','MEMBER_OF').out('MEMBER_OF').out('GROUPS_REFERENCE').back(2).transform{[it, it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList(), it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}";
+
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, res, nodes){
+					var groupsResults = formatGroups(nodes);
+					callback(undefined, { type: "groups", data: groupsResults.reverse() });
+				}
+			);
 		}
 	};
 
@@ -369,14 +508,80 @@ var Stream =  function(config){
 					});
 				},
 				function sendResults(err, results){
-					// console.log('results back');
-					// console.dir(results);
-					console.log('stream fetch done');
+					res.json({ status: "success", data: results });
+				}
+			);
+		},
+		getMeStream: function(req,res,next){
+			var filter = JSON.parse(req.body.data),
+				userID = req.params.id;
+
+			filter.types = ["users","tags","groups"]; // lol when you don't figure out this needs removed
+
+			Step(
+				function startSearches(){
+					var group = this.group();
+					filter.types.forEach(function(type){
+						if(FilterMeStream[type]) {
+							FilterMeStream[type]( userID, undefined, group() );
+						}
+					});
+				},
+				function sendResults(err, results){
 					res.json({ status: "success", data: results });
 				}
 			);
 		},
 		updateNode: function(req,res,next){
+			//var node = JSON.parse(req.body.data),
+			var nodeObj;
+
+			var update = {
+				username: "bigmoney"
+			};
+
+			Step(
+				function getObject(){
+					db.getNodeById(req.params.id, this);
+				},
+				function updateObjectData(err, result) {
+					nodeObj = result;
+					objectMerge([result._data.data, update], this);
+				},
+				function saveNode(err, result) {
+					nodeObj._data.data = result;
+					nodeObj.save(this);
+				},
+				function sendResults(err, result) {
+					delete nodeObj.data.password;
+					res.json({status: "success", data: nodeObj.data });
+				}
+			);
+		},
+		updateRelationship: function(req,res,next){
+			//var node = JSON.parse(req.body.data),
+			var relObj;
+
+			var update = {
+				amount: "5"
+			};
+
+			Step(
+				function getObject(){
+					db.getRelationshipById(req.params.id, this);
+				},
+				function updateObjectData(err, result) {
+					relObj = result;
+					objectMerge([result._data.data, update], this);
+				},
+				function saveNode(err, result) {
+					relObj._data.data = result;
+					relObj.save(this);
+				},
+				function sendResults(err, result) {
+					res.json({status: "success", data: relObj.data });
+				}
+			);
 		},
 		deleteNode: function(req,res,next){
 			var nodeID = req.param.id,
@@ -395,13 +600,12 @@ var Stream =  function(config){
 					}
 				},
 				function sendResults() {
-					console.dir(arguments);
 					res.json({ status: "success", message: "The node got deleted, yo." });
 				}
 			);
 		},
 		deleteRelationship: function(req,res,next) {
-			var relID = req.param.id,
+			var relID = req.params.id,
 				rel;
 
 			Step(
@@ -417,7 +621,6 @@ var Stream =  function(config){
 					}
 				},
 				function sendResults() {
-					console.dir(arguments);
 					res.json({ status: "success", message: "The node got deleted, yo." });
 				}
 			);
@@ -443,14 +646,9 @@ var Stream =  function(config){
 			);
 		},
 		createRelationship: function(req,res,next){
-			console.log('create rel');
 			var relData = JSON.parse(req.body.data),
 				fromId = req.params.start,
 				relProperties = relData.data || {};
-
-			console.log('request param: ' + fromId);
-
-			console.log(relData);
 
 			Step(
 				function getNodes(){
@@ -458,49 +656,14 @@ var Stream =  function(config){
 					db.getNodeById(relData.end, this.parallel() );
 				},
 				function createRel(err, fromNode, toNode) {
-					console.dir(arguments);
 					fromNode.createRelationshipTo(toNode, relData.type, relProperties, this);
 				},
 				function sendResults(err, result){
-					console.log(result);
-					res.json({ status: 'success', data: 'not sure what to put here yet, do you want the rel id?'});
-				}
-			);
-		},
-		editRelationship: function(req,res,next){
-			var rel = JSON.parse(req.body.data),
-				id = req.params.id;
-
-			var relNode;
-
-			Step(
-				function getNode(){
-					db.getRelationshipById(id, this);
-				},
-				function updateRel(err, result) {
-					if(err) {
-						res.json({ status: "error", message: err });
+					if(result._data && result._data.self) {
+						res.json({ status: 'success', data: result._data.self.replace('http://10.179.106.202:7474/db/data/relationship','') });
+					} else {
+						res.json({status: 'error', message: 'go away' });
 					}
-
-					console.log(result._data.data);
-
-					for (var prop in rel.data) {  // MIGHT be .data.data
-						result[prop] = rel.data[prop];
-					}
-
-					console.log(result._data.data);
-
-					relNode = result;
-					relNode.save(this);
-
-				},
-				function sendSavedResults(err, res){
-					console.log(relNode);
-					res.json({ status: "success", data: {
-						id: relNode.id,
-						edit: "url",
-						data: relNode._data.data
-					} });
 				}
 			);
 		},
@@ -529,38 +692,74 @@ var Stream =  function(config){
 					domain = '';
 			}
 
-			var query = "g.v("+relFilter.start+")." +
-				relFilter.direction + "E('"+relFilter.relType+"')" +
-				"."+oppositeDir+"V.outE('MEMBER_OF').inV.outE('"+domain+"')" +
-				".back(3)"
-				;
+			var query;
 
-			Step(
-				function callGremlin(){
-					executeGremlin(query, this);
-				},
-				function sendResults(err, response, results){
-					var nodes = [];
-					for(var i=0, j=results.length; i<j; i++) {
+			if (relFilter.returnRels === true) {
+				query = "g.v("+relFilter.start+")."+relFilter.direction+"E('"+relFilter.relType+"').transform{[it, it."+oppositeDir+"V.next()]}";
+			} else {
+				query = "g.v("+relFilter.start+")." +
+					relFilter.direction + "E('"+relFilter.relType+"')" +
+					"."+oppositeDir+"V.outE('MEMBER_OF').inV.outE('"+domain+"')" +
+					".back(3).dedup"
+					;
+			}
+
+			var sendResults = function(results) {
+				var nodes = [];
+				for(var i=0, j=results.length; i<j; i++) {
 						newObj = {
 							node: results[i].data,
 							id: results[i].self.replace('http://10.179.106.202:7474/db/data/node/','')
 						};
 
+						delete newObj.node.password;
+
 						nodes.push(newObj);
 					}
-					res.json({ status: "success", data: [ { type: relFilter.type, data: nodes } ] });
+				res.json({ status: "success", data: [ { type: relFilter.type, data: nodes } ] });
+			};
+
+			var sendResultsWithRels = function(results) {
+				var nodes = [];
+				for(var i=0, j=results.length; i<j; i++) {
+					var newObj = {},
+						rel = results[i][0],
+						endNode = results[i][1];
+
+					delete endNode.data.password;
+
+					newObj.node = {
+						data: endNode.data,
+						id: endNode.self.replace('http://10.179.106.202:7474/db/data/node/','')
+					};
+
+					newObj.rel = {
+						data: rel.data,
+						id: rel.self.replace('http://10.179.106.202:7474/db/data/relationship/','')
+					};
+
+					nodes.push(newObj);
+				}
+				res.json({ status: "success", data: nodes.reverse() });
+			};
+
+			Step(
+				function callGremlin(){
+					executeGremlin(query, this);
+				},
+				function results(err, response, result){
+					if (relFilter.returnRels === true) {
+						sendResultsWithRels(result);
+					} else {
+						sendResults(result);
+					}
 				}
 			);
 		},
 		getAdventure: function(req, res, next){
 			var advID = req.params.id;
 
-			console.log(req.body);
-
 			var query = "g.v().in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').toList() ]}".replace('v()','v('+advID+')');
-
-			console.log(query);
 
 			Step(
 				function callGremlin(){
@@ -596,11 +795,7 @@ var Stream =  function(config){
 		getGroup: function(req,res,next){
 			var groupID = req.params.id;
 
-			console.log(req.body);
-
 			var query = "g.v().out('FOLLOWS').out('MEMBER_OF').out('USERS_REFERENCE','TAGS_REFERENCE').back(2).both('CREATED','TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList() ]}".replace('v()', 'v(' + groupID + ')');
-
-			console.log(query);
 
 			Step(
 				function callGremlin(){
@@ -640,11 +835,7 @@ var Stream =  function(config){
 		getTag: function(req,res,next){
 			var tagID = req.params.id;
 
-			console.log(req.body);
-
 			var query = "g.v().in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList() ]}".replace('v()', 'v(' + tagID + ')');
-
-			console.log(query);
 
 			Step(
 				function callGremlin(){
@@ -674,7 +865,6 @@ var Stream =  function(config){
 
 						tagResults.push(newObj);
 					}
-
 					res.json({ status:"success", data: [ { type: "moments", data: tagResults } ]});
 				}
 			);
@@ -689,7 +879,6 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, response, node){
-					console.log(node);
 					var newObj = {
 						node: node[0][0].data,
 						moments: node[0][1],
@@ -709,12 +898,12 @@ var Stream =  function(config){
 
 			Step(
 				function getUserStreams(){
-					FilterUserStream.moments(userID, this.parallel() );
-					FilterUserStream.adventures(userID, this.parallel() );
+					FilterProfileStream.moments(userID, this.parallel() );
+					FilterProfileStream.adventures(userID, this.parallel() );
+					FilterProfileStream.groups(userID, this.parallel() );
 				},
-				function results(err, moments, adventures) {
-					console.log('user stream: ');
-					res.json({ status: "success", data: [moments, adventures] });
+				function results(err, moments, adventures, groups) {
+					res.json({ status: "success", data: [moments, adventures, groups] });
 				}
 			);
 		}

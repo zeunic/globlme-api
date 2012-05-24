@@ -82,19 +82,26 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
 // stream route declarations -> maps to stream.js
 api.post('/:apiVersion/stream', setUpRequest, StreamModule.getStream);
 api.post('/:apiVersion/stream/search', setUpRequest, StreamModule.search);
+
 api.post('/:apiVersion/stream/relationships/create/:start', setUpRequest, StreamModule.createRelationship);
 api.post('/:apiVersion/stream/relationships', setUpRequest, StreamModule.searchRelationships);
-api.post('/:apiVersion/stream/relationships/edit/:id', setUpRequest, StreamModule.editRelationship);
 
+// Get User-Specific Stream
+api.post('/:apiVersion/stream/me/:id', setUpRequest, StreamModule.getMeStream);
+
+// Get Collections
 api.post('/:apiVersion/stream/adventure/:id', setUpRequest, StreamModule.getAdventure);
 api.post('/:apiVersion/stream/tag/:id', setUpRequest, StreamModule.getTag);
 api.post('/:apiVersion/stream/group/:id', setUpRequest, StreamModule.getGroup);
 
+// specific routes for getting a user, or a user profile
 api.post('/:apiVersion/stream/profile/:id', setUpRequest, StreamModule.getProfile);
 api.post('/:apiVersion/stream/user/:id', setUpRequest, StreamModule.getUserStream);
 
 api.post('/:apiVersion/node/delete/:id', setUpRequest, StreamModule.deleteNode);
 api.post('/:apiVersion/relationship/delete/:id', setUpRequest, StreamModule.deleteRelationship);
+api.post('/:apiVersion/node/update/:id', setUpRequest, StreamModule.updateNode);
+api.post('/:apiVersion/relationship/update/:id',setUpRequest, StreamModule.updateRelationship);
 
 // tag creation -> maps to ./routes/tags.js
 api.post('/:apiVersion/tag/create', setUpRequest, TagModule.createTag);

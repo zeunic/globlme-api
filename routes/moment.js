@@ -35,12 +35,6 @@ var Moment = function(config){
 			}, momentNode, momentTags, momentUsers, momentImages, momentOwner,
 				momentOriginalImage;
 
-			// get all tag nodes so you can create relationships to them
-			// get all user nodes so you can create relationships to them
-			// process images and save to CDN, store URLs
-			// once complete create node
-			// once saved, create relationships to moment
-
 			Step(
 				function getTags(){
 					if(newMoment.tags.length) {
@@ -139,6 +133,8 @@ var Moment = function(config){
 				},
 				function relateNodeAdventure(err, result){
 					if(result) {
+						console.log('adventure found: ');
+						console.log(result);
 						momentNode.createRelationshipTo(result, 'MEMBER_OF', {}, this);
 					} else {
 						return 'i dont know';
@@ -147,6 +143,7 @@ var Moment = function(config){
 				function sendResults(err, results) {
 					console.log("moment saved!");
 					console.log(momentNode.id);
+					console.log(results);
 					momentData.id = momentNode.id;
 
 					res.json({ status: 'success', data: momentData });
