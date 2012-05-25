@@ -491,6 +491,7 @@ var Stream =  function(config){
 	return {
 		getStream: function(req, res, next){
 			var filter = JSON.parse(req.body.data);
+
 			filter.types = ["moments", "groups", "users","tags", "adventures"]; // lol when you don't figure out this needs removed
 
 			Step(

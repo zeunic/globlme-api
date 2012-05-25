@@ -2,10 +2,6 @@
 * Module dependencies.
 */
 
-process.on('uncaughtException', function (err) {
-  console.log('Caught exception: ' + err);
-});
-
 var express = require('express'),
 	format = require('util').format,
 	api = module.exports = express.createServer();
@@ -36,6 +32,36 @@ var UserModule = new User(dbConfig),
 	MomentModule = new Moment(dbConfig),
 	AdventureModule = new Adventure(dbConfig),
 	GroupModule = new Group(dbConfig);
+
+
+/**
+* Email Handling?
+*/
+
+process.on('uncaughtException', function (err) {
+	// console.log('Caught exception: ' + err);
+
+	console.log(err);
+
+	var message = "WARNING: Globl.me API Error: \r\n\r\n" +
+		"ERROR: " + err +"\r\n" +
+		"STACK: " + "err.stack";
+
+	email.send({
+		host: 'smtp.gmail.com',
+		port: '25',
+		to: 'Stephen Rivas Jr <stephen@zeunic.com>',
+		from: 'Globl.me API <social@zeunic.com>',
+		subject: 'WARNING: Globl.me API Error',
+		body: message,
+		username: 'social@zeunic.com',
+		password: '$s4sites',
+		authentication: 'login'
+	}, function(err, result){
+		console.log(err || result);
+	});
+
+});
 
 
 /**
@@ -129,21 +155,25 @@ api.post('/:apiVersion/user/updatePhoto', setUpRequest, UserModule.updatePhoto);
 
 
 api.post('/:apiVersion/feedback', setUpRequest, function(req, res, next){
-	var feedback = req.body.data.text;
+	var feedback = JSON.parse(req.body.data).text,
+		username = JSON.parse(req.body.data).username;
 
-	var server = email.server.connect({
-		user: "social@zeunic.com",
-		password: "s4p@venue",
-		host: "smtp.gmail.com"
-	});
+	var message = "In App Feedback from: " + username + ": \r\n\r\n" +
+		feedback;
 
-	server.send({
-		text: feedback,
-		from: "Feedback <social@zeunic.com>",
-		to: "Zeunic <social@zeunic.com>",
-		subject: "Globl.me Feedback"
-	}, function(err, message){
-		console.log(err || message);
+	email.send({
+		host: 'smtp.gmail.com',
+		port: '25',
+		to: 'Support <social@zeunic.com>',
+		from: 'Feedback <social@zeunic.com>',
+		subject: 'Globl.me In-App Feedback',
+		body: message,
+		username: 'social@zeunic.com',
+		password: '$s4sites',
+		authentication: 'login'
+	}, function(err, result){
+		console.log(err || result);
+		if(result) res.json({ status: "success", message: "Feedback sent"});
 	});
 
 });
