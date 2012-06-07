@@ -134,6 +134,8 @@ var Stream =  function(config){
 						usersResults.push(newObj);
 					}
 
+					usersResults.reverse();
+
 					callback(undefined, { type:"users", data: usersResults });
 				}
 			);
@@ -162,7 +164,6 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					// console.log('///////////////////////////////////////// Adventures');
 					nodes.shift(); // fuck me, right?
 					var adventuresResults = [];
 
@@ -246,17 +247,21 @@ var Stream =  function(config){
 				function results(err, res, nodes){
 					nodes.shift(); // removing the first item might not actually or always work but for now...
 					var tagsResults = [];
+
 					for(var i=0, j=nodes.length; i<j; i++) {
 						var tag = nodes[i][0][0],
 							moment = nodes[i][1][0];
 
-						var newObj = {
-							id: tag.self.replace('http://10.179.106.202:7474/db/data/node/',''),
-							title: tag.data.tag,
-							imageUrl: moment.data.imageUrl,
-							focusPoint: moment.data.focusPoint
-						};
-						tagsResults.push(newObj);
+						if(tag && tag.self && tag.data && moment.data) {
+							var newObj = {
+								id: tag.self.replace('http://10.179.106.202:7474/db/data/node/',''),
+								title: tag.data.tag,
+								imageUrl: moment.data.imageUrl,
+								focusPoint: moment.data.focusPoint
+							};
+							tagsResults.push(newObj);
+						}
+
 					}
 
 					tagsResults.reverse();
@@ -287,6 +292,8 @@ var Stream =  function(config){
 
 						usersResults.push(newObj);
 					}
+
+					usersResults.reverse();
 
 					callback(undefined, { type:"users", data: usersResults });
 				}
@@ -325,20 +332,24 @@ var Stream =  function(config){
 							moment = nodes[i][1][0],
 							tags = nodes[i][2];
 
-						newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
-						newObj.imageUrl = moment.data.imageUrl;
-						newObj.tags = [];
+						if(adventure && moment && tags) {
 
-						for (var k=0, l=tags.length; k<l; k++){
-							var tag = {
-								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
-								title: tags[k].data.tag
-							};
+							newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
+							newObj.imageUrl = moment.data.imageUrl;
+							newObj.tags = [];
 
-							newObj.tags.push(tag);
+							for (var k=0, l=tags.length; k<l; k++){
+								var tag = {
+									id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+									title: tags[k].data.tag
+								};
+
+								newObj.tags.push(tag);
+							}
+
+							adventuresResults.push(newObj);
+
 						}
-
-						adventuresResults.push(newObj);
 
 					}
 					adventuresResults.reverse();
@@ -867,17 +878,20 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, response, node){
-					var newObj = {
-						node: node[0][0].data,
-						moments: node[0][1],
-						likes: node[0][2],
-						following: node[0][3],
-						followers: node[0][4]
-					};
+					if(node[0]) {
+						var newObj = {
+							node: node[0][0].data,
+							moments: node[0][1],
+							likes: node[0][2],
+							following: node[0][3],
+							followers: node[0][4]
+						};
 
-					delete newObj.node.password;
-
-					res.json({ status: "success", data: { type: "profile", data: newObj } });
+						delete newObj.node.password;
+						res.json({ status: "success", data: { type: "profile", data: newObj } });
+					} else {
+						res.json({status: "error", message: "unable to fetch profile" });
+					}
 				}
 			);
 		},

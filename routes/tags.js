@@ -39,8 +39,10 @@ var Tag = function(config) {
 				},
 				function tagSaveComplete(err){
 					if(!err) {
+						console.log('new tag');
 						res.json( { status: "success", data: { id: tag.id } } );
 					} else {
+						console.log('no tag');
 						res.json( { status: "error", message: 'Tag not created' } );
 					}
 				}

@@ -42,10 +42,11 @@ process.on('uncaughtException', function (err) {
 	// console.log('Caught exception: ' + err);
 
 	console.log(err);
+	console.log(err.stack);
 
 	var message = "WARNING: Globl.me API Error: \r\n\r\n" +
 		"ERROR: " + err +"\r\n" +
-		"STACK: " + "err.stack";
+		"STACK: " + err.stack;
 
 	email.send({
 		host: 'smtp.gmail.com',
