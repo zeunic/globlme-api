@@ -123,12 +123,12 @@ var User = function(config) {
 				function userSaveComplete(err){
 					if(!err) {
 						userData.id = node.id;
+						console.log('hey: ' + userData.id);
 						res.json(  { status: "success", data: userData } );
 					} else {
+						console.log('hey fail: ' + err);
 						res.json( { status: "error", message: err } );
 					}
-
-					res.end();
 				}
 			);
 		},
