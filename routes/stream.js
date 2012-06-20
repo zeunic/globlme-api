@@ -30,7 +30,6 @@ var db,
 	MOMENTS_REFERENCE;
 
 var Stream =  function(config){
-
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
 
 	// takes any number of objects and merges them in to one object
@@ -316,7 +315,7 @@ var Stream =  function(config){
 		},
 		adventures: function(filter, callback){
 			// imageUrl, tags, title, id
-			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('ADVENTURES_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList() ]}.dedup";
+			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('ADVENTURES_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList(), it.in('CREATED') ]}.dedup";
 
 			Step(
 				function callGremlin(){
@@ -330,13 +329,18 @@ var Stream =  function(config){
 						var newObj = {},
 							adventure = nodes[i][0][0],
 							moment = nodes[i][1][0],
-							tags = nodes[i][2];
+							tags = nodes[i][2],
+							author = nodes[i][3][0].data;
 
 						if(adventure && moment && tags) {
+
+							delete author.password;
 
 							newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
 							newObj.imageUrl = moment.data.imageUrl;
 							newObj.tags = [];
+							newObj.node = adventure.data;
+							newObj.author = author;
 
 							for (var k=0, l=tags.length; k<l; k++){
 								var tag = {
@@ -463,6 +467,7 @@ var Stream =  function(config){
 							newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
 							newObj.imageUrl = moment.data.imageUrl;
 							newObj.tags = [];
+							newObj.node = adventure.data;
 
 							for (var k=0, l=tags.length; k<l; k++){
 								var tag = {
@@ -503,7 +508,10 @@ var Stream =  function(config){
 		getStream: function(req, res, next){
 			var filter = JSON.parse(req.body.data);
 
-			filter.types = ["moments", "groups", "users","tags", "adventures"]; // lol when you don't figure out this needs removed
+			if (!filter.types) {
+				console.log('no types, using full...');
+				filter.types = ["moments", "groups", "users","tags", "adventures"];
+			}
 
 			Step(
 				function startSearches(){
@@ -640,6 +648,8 @@ var Stream =  function(config){
 					});
 				},
 				function sendResults(err, results){
+					console.log(results);
+					console.log('search results ^');
 					res.json(results);
 				}
 			);

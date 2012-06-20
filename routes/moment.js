@@ -25,11 +25,14 @@ var Moment = function(config){
 			var newMoment = JSON.parse(req.body.data);
 
 			var momentData = {
-				title: newMoment.title,
 				date: newMoment.date,
 				focusPoint: newMoment.focusPoint
 			}, momentNode, momentTags, momentUsers, momentImages, momentOwner,
 				momentOriginalImage;
+
+			if(newMoment.title) {
+				momentData.title = newMoment.title;
+			}
 
 			Step(
 				function getTags(){
@@ -81,6 +84,7 @@ var Moment = function(config){
 					ImagesModule.storeImagesToCDN(resizedImages, userGuid, this);
 				},
 				function saveMomentNode(err, results){
+					console.log('images stored to CDN...');
 					momentData.imageUrl = results[0].replace('.jpg','');
 					momentNode = db.createNode(momentData);
 					momentNode.save(this);
