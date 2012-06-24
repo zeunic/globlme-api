@@ -205,7 +205,7 @@ var Stream =  function(config){
 			);
 		},
 		moments: function(filter, callback){
-			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList(), it.in('CREATED').next() ] }";
+			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.in('LIKES').toList() ] }";
 
 			Step(
 				function callGremlin(){
@@ -219,7 +219,8 @@ var Stream =  function(config){
 							var newObj = {},
 								node = nodes[i][0],
 								tags = nodes[i][1],
-								author = nodes[i][2];
+								author = nodes[i][2],
+								likes = nodes[i][3];
 
 							var formattedTags =[];
 
@@ -231,7 +232,16 @@ var Stream =  function(config){
 								formattedTags.push(tag);
 							}
 
+							var totalLikes = 0;
+
+							if(likes.length) {
+								for (var m=0, n=likes.length; m<n; m++) {
+									totalLikes += likes[m].data.value;
+								}
+							}
+
 							newObj.node = node.data;
+							newObj.totalLikes = totalLikes;
 							newObj.tags = formattedTags;
 							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
 							newObj.author = author.data.username;
@@ -380,7 +390,7 @@ var Stream =  function(config){
 			);
 		},
 		moments: function(filter, callback){
-			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList(), it.in('CREATED').next() ] }";
+			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.inE('LIKES').toList() ] }";
 
 			Step(
 				function callGremlin(){
@@ -394,7 +404,8 @@ var Stream =  function(config){
 							var newObj = {},
 								node = nodes[i][0],
 								tags = nodes[i][1],
-								author = nodes[i][2];
+								author = nodes[i][2],
+								likes = nodes[i][3];
 
 							var formattedTags =[];
 
@@ -406,7 +417,16 @@ var Stream =  function(config){
 								formattedTags.push(tag);
 							}
 
+							var totalLikes = 0;
+
+							if(likes.length) {
+								for (var m=0, n=likes.length; m<n; m++) {
+									totalLikes += likes[m].data.value;
+								}
+							}
+
 							newObj.node = node.data;
+							newObj.totalLikes = totalLikes;
 							newObj.tags = formattedTags;
 							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
 							newObj.authorUserName = author.data.username;
@@ -424,7 +444,7 @@ var Stream =  function(config){
 
 	var FilterProfileStream = {
 		moments: function(userID, callback){
-			var query = "g.v().out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[it, it.out('TAGGED_IN').toList(), it.in('CREATED').next() ]}".replace('v()','v('+userID+')');
+			var query = "g.v().out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.inV('LIKES').toList() ]}".replace('v()','v('+userID+')');
 
 			Step(
 				function callGremlin(){
@@ -438,7 +458,8 @@ var Stream =  function(config){
 							var newObj = {},
 								node = nodes[i][0],
 								tags = nodes[i][1],
-								author = nodes[i][2];
+								author = nodes[i][2],
+								likes = nodes[i][3];
 
 							var formattedTags =[];
 
@@ -450,7 +471,16 @@ var Stream =  function(config){
 								formattedTags.push(tag);
 							}
 
+							var totalLikes = 0;
+
+							if(likes.length) {
+								for (var m=0, n=likes.length; m<n; m++) {
+									totalLikes += likes[m].data.value;
+								}
+							}
+
 							newObj.node = node.data;
+							newObj.totalLikes = totalLikes;
 							newObj.tags = formattedTags;
 							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
 							newObj.author = author.data.username;
