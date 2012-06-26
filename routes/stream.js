@@ -244,7 +244,8 @@ var Stream =  function(config){
 							newObj.totalLikes = totalLikes;
 							newObj.tags = formattedTags;
 							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
-							newObj.author = author.data.username;
+							newObj.authorUserName = author.data.username;
+							newObj.authorID = author.self.replace('http://10.179.106.202:7474/db/data/node/','');
 
 							momentResults.push(newObj);
 						}
@@ -430,6 +431,7 @@ var Stream =  function(config){
 							newObj.tags = formattedTags;
 							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
 							newObj.authorUserName = author.data.username;
+							newObj.authorID = author.self.replace('http://10.179.106.202:7474/db/data/node/','');
 
 							momentResults.push(newObj);
 						}
@@ -483,7 +485,8 @@ var Stream =  function(config){
 							newObj.totalLikes = totalLikes;
 							newObj.tags = formattedTags;
 							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
-							newObj.author = author.data.username;
+							newObj.authorUserName = author.data.username;
+							newObj.authorID = author.self.replace('http://10.179.106.202:7474/db/data/node/','');
 
 							momentResults.push(newObj);
 						}
