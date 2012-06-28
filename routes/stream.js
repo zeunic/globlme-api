@@ -85,6 +85,48 @@ var Stream =  function(config){
 		return groupsResults;
 	};
 
+	var formatMoments = function(nodes) {
+		var momentResults = [];
+		if (nodes.length) {
+			for (var i=0, j=nodes.length; i<j; i++) {
+				var newObj = {},
+					node = nodes[i][0],
+					tags = nodes[i][1],
+					author = nodes[i][2],
+					likes = nodes[i][3];
+
+				var formattedTags =[];
+
+				for(var k=0, l=tags.length; k<l; k++) {
+					var tag = {
+						id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+						title: tags[k].data.tag
+					};
+					formattedTags.push(tag);
+				}
+
+				var totalLikes = 0;
+
+				if(likes.length) {
+					for (var m=0, n=likes.length; m<n; m++) {
+						totalLikes += likes[m].data.value;
+					}
+				}
+
+				newObj.node = node.data;
+				newObj.totalLikes = totalLikes;
+				newObj.tags = formattedTags;
+				newObj.id = node.self.replace('http://10.179.106.202:7474/db/data/node/','');
+				newObj.authorUserName = author.data.username;
+				newObj.authorID = author.self.replace('http://10.179.106.202:7474/db/data/node/','');
+
+				momentResults.push(newObj);
+			}
+		}
+
+		return momentResults;
+	};
+
 	var FilterMeStream = {
 		tags: function(userID, filter, callback){
 			var query = "g.v("+userID+").out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).transform{[ it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}.dedup";
@@ -212,45 +254,7 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					var momentResults = [];
-
-					if (nodes.length) {
-						for (var i=0, j=nodes.length; i<j; i++) {
-							var newObj = {},
-								node = nodes[i][0],
-								tags = nodes[i][1],
-								author = nodes[i][2],
-								likes = nodes[i][3];
-
-							var formattedTags =[];
-
-							for(var k=0, l=tags.length; k<l; k++) {
-								var tag = {
-									id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
-									title: tags[k].data.tag
-								};
-								formattedTags.push(tag);
-							}
-
-							var totalLikes = 0;
-
-							if(likes.length) {
-								for (var m=0, n=likes.length; m<n; m++) {
-									totalLikes += likes[m].data.value;
-								}
-							}
-
-							newObj.node = node.data;
-							newObj.totalLikes = totalLikes;
-							newObj.tags = formattedTags;
-							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
-							newObj.authorUserName = author.data.username;
-							newObj.authorID = author.self.replace('http://10.179.106.202:7474/db/data/node/','');
-
-							momentResults.push(newObj);
-						}
-					}
-
+					var momentResults = formatMoments(nodes);
 					callback(undefined, { type: "moments", data: momentResults.reverse() });
 
 				}
@@ -398,44 +402,7 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					var momentResults = [];
-
-					if (nodes.length) {
-						for (var i=0, j=nodes.length; i<j; i++) {
-							var newObj = {},
-								node = nodes[i][0],
-								tags = nodes[i][1],
-								author = nodes[i][2],
-								likes = nodes[i][3];
-
-							var formattedTags =[];
-
-							for(var k=0, l=tags.length; k<l; k++) {
-								var tag = {
-									id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
-									title: tags[k].data.tag
-								};
-								formattedTags.push(tag);
-							}
-
-							var totalLikes = 0;
-
-							if(likes.length) {
-								for (var m=0, n=likes.length; m<n; m++) {
-									totalLikes += likes[m].data.value;
-								}
-							}
-
-							newObj.node = node.data;
-							newObj.totalLikes = totalLikes;
-							newObj.tags = formattedTags;
-							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
-							newObj.authorUserName = author.data.username;
-							newObj.authorID = author.self.replace('http://10.179.106.202:7474/db/data/node/','');
-
-							momentResults.push(newObj);
-						}
-					}
+					var momentResults = formatMoments(nodes);
 
 					callback(undefined, { type: "moments", data: momentResults.reverse() });
 
@@ -446,51 +413,14 @@ var Stream =  function(config){
 
 	var FilterProfileStream = {
 		moments: function(userID, callback){
-			var query = "g.v().out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.inV('LIKES').toList() ]}".replace('v()','v('+userID+')');
+			var query = "g.v().out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.inE('LIKES').toList() ]}".replace('v()','v('+userID+')');
 
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					var momentResults = [];
-
-					if (nodes.length) {
-						for (var i=0, j=nodes.length; i<j; i++) {
-							var newObj = {},
-								node = nodes[i][0],
-								tags = nodes[i][1],
-								author = nodes[i][2],
-								likes = nodes[i][3];
-
-							var formattedTags =[];
-
-							for(var k=0, l=tags.length; k<l; k++) {
-								var tag = {
-									id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
-									title: tags[k].data.tag
-								};
-								formattedTags.push(tag);
-							}
-
-							var totalLikes = 0;
-
-							if(likes.length) {
-								for (var m=0, n=likes.length; m<n; m++) {
-									totalLikes += likes[m].data.value;
-								}
-							}
-
-							newObj.node = node.data;
-							newObj.totalLikes = totalLikes;
-							newObj.tags = formattedTags;
-							newObj.id = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/node/','');
-							newObj.authorUserName = author.data.username;
-							newObj.authorID = author.self.replace('http://10.179.106.202:7474/db/data/node/','');
-
-							momentResults.push(newObj);
-						}
-					}
+					var momentResults = formatMoments(nodes);
 
 					momentResults.reverse();
 
