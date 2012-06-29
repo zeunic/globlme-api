@@ -329,7 +329,6 @@ var Stream =  function(config){
 			);
 		},
 		groups: function(filter, callback){
-			console.log('get groups...');
 			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('GROUPS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[it, it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList(), it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('CREATED').next(), it.in('FOLLOWS').count() ]}";
 
 			Step(
@@ -337,9 +336,7 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					console.log('group result args: ');
 					var groupsResults = formatGroups(nodes);
-					console.dir(groupsResults);
 					callback(undefined, { type: "groups", data: groupsResults.reverse() });
 				}
 			);
@@ -443,6 +440,9 @@ var Stream =  function(config){
 					});
 				},
 				function sendResults(err, results){
+					// check for popular or recent sort
+					// run results through sorting.js
+					console.log("log stream: ", results);
 					res.json({ status: "success", data: results });
 				}
 			);
@@ -706,7 +706,7 @@ var Stream =  function(config){
 		getGroup: function(req,res,next){
 			var groupID = req.params.id;
 
-			var query = "g.v().out('FOLLOWS').out('MEMBER_OF').out('USERS_REFERENCE','TAGS_REFERENCE').back(2).both('CREATED','TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList() ]}".replace('v()', 'v(' + groupID + ')');
+			var query = "g.v().out('FOLLOWS').out('MEMBER_OF').out('USERS_REFERENCE','TAGS_REFERENCE').back(2).both('CREATED','TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.inE('LIKES').toList() ]}".replace('v()', 'v(' + groupID + ')');
 
 			Step(
 				function callGremlin(){
@@ -715,29 +715,7 @@ var Stream =  function(config){
 				function results(err, response, nodes){
 					// replace('http://10.179.106.202:7474/db/data/node/','');
 
-					var groupResults = [];
-
-					for(var i=0, j=nodes.length; i<j; i++) {
-						var newObj = {},
-							moment = nodes[i][0],
-							tags = nodes[i][1]
-							;
-
-						newObj.id = moment.self.replace('http://10.179.106.202:7474/db/data/node/','');
-						newObj.node = moment.data;
-						newObj.tags = [];
-
-						for(var k=0, l=tags.length; k<l; k++) {
-							var tag = {
-								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
-								title: tags[k].data.tag
-							};
-
-							newObj.tags.push(tag);
-						}
-
-						groupResults.push(newObj);
-					}
+					var groupResults = formatMoments(nodes);
 
 					res.json({ status:"success", data: [ { type: "moments", data: groupResults } ]});
 				}
