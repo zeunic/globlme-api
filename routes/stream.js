@@ -127,6 +127,66 @@ var Stream =  function(config){
 		return momentResults;
 	};
 
+	var formatUsers = function(nodes) {
+		var usersResults = [];
+		if (nodes.length) {
+			for(var i=0, j=nodes.length; i<j; i++) {
+				var el = nodes[i][0],
+					followers = nodes[i][1];
+				var newObj = {
+					id: el.self.replace('http://10.179.106.202:7474/db/data/node/',''),
+					node: el.data,
+					totalFollowers: followers.length
+				};
+
+				delete newObj.node.password;
+
+				usersResults.push(newObj);
+			}
+		}
+
+		return usersResults;
+	};
+
+	var formatAdventures = function(nodes){
+		var adventuresResults = [];
+		if(nodes.length) {
+			for (var i=0, j=nodes.length; i<j; i++) {
+				var newObj = {},
+					adventure = nodes[i][0][0],
+					moment = nodes[i][1][0],
+					tags = nodes[i][2],
+					author = nodes[i][3],
+					totalMoments = nodes[i][1].length;
+
+				if(adventure && moment && tags) {
+
+					delete author.password;
+
+					newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
+					newObj.imageUrl = moment.data.imageUrl;
+					newObj.tags = [];
+					newObj.node = adventure.data;
+					newObj.author = author.data.username;
+					newObj.totalMoments = totalMoments;
+
+					for (var k=0, l=tags.length; k<l; k++){
+						var tag = {
+							id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+							title: tags[k].data.tag
+						};
+
+						newObj.tags.push(tag);
+					}
+
+					adventuresResults.push(newObj);
+				}
+			}
+		}
+
+		return adventuresResults;
+	};
+
 	var FilterMeStream = {
 		tags: function(userID, filter, callback){
 			var query = "g.v("+userID+").out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).transform{[ it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}.dedup";
@@ -160,29 +220,15 @@ var Stream =  function(config){
 		},
 		users: function(userID, filter, callback){
 			// id, node
-			var query = "g.v("+userID+").out('FOLLOWS').out('MEMBER_OF').out('USERS_REFERENCE').back(2).hasNot('photo', null)";
+			var query = "g.v("+userID+").out('FOLLOWS').out('MEMBER_OF').out('USERS_REFERENCE').back(2).hasNot('photo', null).transform{[it, it.in('FOLLOWS').toList()]}";
 
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					var usersResults = [];
-
-					for(var i=0, j=nodes.length; i<j; i++) {
-						var el = nodes[i];
-						var newObj = {
-							id: el.self.replace('http://10.179.106.202:7474/db/data/node/',''),
-							node: el.data
-						};
-
-						delete newObj.node.password;
-
-						usersResults.push(newObj);
-					}
-
+					var usersResults = formatUsers(nodes);
 					usersResults.reverse();
-
 					callback(undefined, { type:"users", data: usersResults });
 				}
 			);
@@ -202,7 +248,7 @@ var Stream =  function(config){
 				}
 			);
 		},
-		adventures: function(filter, callback){
+		adventures: function(userID, filter, callback){
 			// imageUrl, tags, title, id
 			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('ADVENTURES_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList(), it.in('CREATED').next() ]}.dedup";
 
@@ -211,43 +257,13 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					nodes.shift(); // fuck me, right?
-					var adventuresResults = [];
-
-					for (var i=0, j=nodes.length; i<j; i++) {
-						var newObj = {},
-							adventure = nodes[i][0][0],
-							moment = nodes[i][1][0],
-							tags = nodes[i][2],
-							author = nodes[i][3],
-							totalMoments = nodes[i][1].length;
-
-						newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
-						newObj.imageUrl = moment.data.imageUrl;
-						newObj.author = author.data.username;
-						newObj.tags = [];
-						newObj.totalMoments = totalMoments;
-
-						for (var k=0, l=tags.length; k<l; k++){
-							var tag = {
-								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
-								title: tags[k].data.tag
-							};
-
-							newObj.tags.push(tag);
-						}
-
-						adventuresResults.push(newObj);
-
-					}
-
+					var adventuresResults = formatAdventures(nodes);
 					callback(undefined, { type: "adventures", data: adventuresResults });
-
 				}
 			);
 		},
-		moments: function(filter, callback){
-			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.in('LIKES').toList() ] }";
+		moments: function(userID, filter, callback){
+			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.inE('LIKES').toList()] }";
 
 			Step(
 				function callGremlin(){
@@ -256,7 +272,6 @@ var Stream =  function(config){
 				function results(err, res, nodes){
 					var momentResults = formatMoments(nodes);
 					callback(undefined, { type: "moments", data: momentResults.reverse() });
-
 				}
 			);
 		}
@@ -300,36 +315,21 @@ var Stream =  function(config){
 		},
 		users: function(filter, callback){
 			// id, node
-			var query = "g.v(0).inE('USERS_REFERENCE').outV.inE('MEMBER_OF').outV.hasNot('photo', null)";
+			var query = "g.v(0).inE('USERS_REFERENCE').outV.inE('MEMBER_OF').outV.hasNot('photo', null).transform{[it, it.in('FOLLOWS').toList()]}";
 
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					var usersResults = [];
-
-					for(var i=0, j=nodes.length; i<j; i++) {
-						var el = nodes[i];
-						var newObj = {
-							id: el.self.replace('http://10.179.106.202:7474/db/data/node/',''),
-							node: el.data
-						};
-
-						delete newObj.node.password;
-
-						usersResults.push(newObj);
-					}
-
-					usersResults.reverse();
-
+					var usersResults = formatUsers(nodes);
+					// usersResults.reverse();
 					callback(undefined, { type:"users", data: usersResults });
 				}
 			);
 		},
 		groups: function(filter, callback){
-			// imageUrl, tags, title, id
-
+			console.log('get groups...');
 			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('GROUPS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[it, it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList(), it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('CREATED').next(), it.in('FOLLOWS').count() ]}";
 
 			Step(
@@ -337,7 +337,9 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
+					console.log('group result args: ');
 					var groupsResults = formatGroups(nodes);
+					console.dir(groupsResults);
 					callback(undefined, { type: "groups", data: groupsResults.reverse() });
 				}
 			);
@@ -351,44 +353,8 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					nodes.shift(); // fuck me, right?
-					var adventuresResults = [];
-
-					for (var i=0, j=nodes.length; i<j; i++) {
-						var newObj = {},
-							adventure = nodes[i][0][0],
-							moment = nodes[i][1][0],
-							tags = nodes[i][2],
-							author = nodes[i][3],
-							totalMoments = nodes[i][1].length;
-
-						if(adventure && moment && tags) {
-
-							delete author.password;
-
-							newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
-							newObj.imageUrl = moment.data.imageUrl;
-							newObj.tags = [];
-							newObj.node = adventure.data;
-							newObj.author = author.data.username;
-							newObj.totalMoments = totalMoments;
-
-							for (var k=0, l=tags.length; k<l; k++){
-								var tag = {
-									id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
-									title: tags[k].data.tag
-								};
-
-								newObj.tags.push(tag);
-							}
-
-							adventuresResults.push(newObj);
-
-						}
-
-					}
+					var adventuresResults = formatAdventures(nodes);
 					adventuresResults.reverse();
-
 					callback(undefined, { type: "adventures", data: adventuresResults });
 
 				}
@@ -437,41 +403,8 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					// nodes.pop(); // fuck me, right?
-					var adventuresResults = [];
-
-					for (var i=0, j=nodes.length; i<j; i++) {
-						var newObj = {},
-							adventure = nodes[i][0][0],
-							moment = nodes[i][1][0],
-							tags = nodes[i][2],
-							author = nodes[i][3],
-							totalMoments = nodes[i][1].length;
-
-						if(adventure && moment && tags) {
-							newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
-							newObj.imageUrl = moment.data.imageUrl;
-							newObj.tags = [];
-							newObj.node = adventure.data;
-							newObj.author = author.data.username;
-							newObj.totalMoments = totalMoments;
-
-							for (var k=0, l=tags.length; k<l; k++){
-								var tag = {
-									id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
-									title: tags[k].data.tag
-								};
-
-								newObj.tags.push(tag);
-							}
-
-							adventuresResults.push(newObj);
-						}
-
-					}
-
+					var adventuresResults = formatAdventures(nodes);
 					adventuresResults.reverse();
-
 					callback(undefined, { type: "adventures", data: adventuresResults });
 				}
 			);
@@ -518,7 +451,10 @@ var Stream =  function(config){
 			var filter = JSON.parse(req.body.data),
 				userID = req.params.id;
 
-			filter.types = ["users","tags","groups"]; // lol when you don't figure out this needs removed
+			if (!filter.types) {
+				console.log('ME no types, using full...');
+				filter.types = ["moments", "groups", "users","tags", "adventures"];
+			}
 
 			Step(
 				function startSearches(){
@@ -755,35 +691,14 @@ var Stream =  function(config){
 		getAdventure: function(req, res, next){
 			var advID = req.params.id;
 
-			var query = "g.v().in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').toList() ]}".replace('v()','v('+advID+')');
+			var query = "g.v().in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.inE('LIKES').toList() ]}".replace('v()','v('+advID+')');
 
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
 				},
 				function result(err, response, nodes){
-					var adventuresResults = [];
-
-					for(var i=0, j=nodes.length; i<j; i++) {
-						var newObj = {},
-							moment = nodes[i][0],
-							tags = nodes[i][1];
-
-						newObj.id = moment.self.replace('http://10.179.106.202:7474/db/data/node/','');
-						newObj.node = moment.data;
-						newObj.tags = [];
-
-						for(var k=0, l=tags.length; k<l; k++) {
-							var tag = {
-								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
-								title: tags[k].data.tag
-							};
-
-							newObj.tags.push(tag);
-						}
-
-						adventuresResults.push(newObj);
-					}
+					var adventuresResults = formatMoments(nodes);
 					res.json({ status:"success", data: [ { type: "moments", data: adventuresResults } ]});
 				}
 			);
@@ -831,36 +746,14 @@ var Stream =  function(config){
 		getTag: function(req,res,next){
 			var tagID = req.params.id;
 
-			var query = "g.v().in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList() ]}".replace('v()', 'v(' + tagID + ')');
+			var query = "g.v().in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).transform{[ it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.inE('LIKES').toList() ]}".replace('v()', 'v(' + tagID + ')');
 
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
 				},
 				function results(err, response, nodes){
-					var tagResults = [];
-
-					for(var i=0, j=nodes.length; i<j; i++) {
-						var newObj = {},
-							moment = nodes[i][0],
-							tags = nodes[i][1]
-							;
-
-						newObj.id = moment.self.replace('http://10.179.106.202:7474/db/data/node/','');
-						newObj.node = moment.data;
-						newObj.tags = [];
-
-						for(var k=0, l=tags.length; k<l; k++) {
-							var tag = {
-								id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
-								title: tags[k].data.tag
-							};
-
-							newObj.tags.push(tag);
-						}
-
-						tagResults.push(newObj);
-					}
+					var tagResults = formatMoments(nodes);
 					res.json({ status:"success", data: [ { type: "moments", data: tagResults } ]});
 				}
 			);
@@ -868,7 +761,7 @@ var Stream =  function(config){
 		getProfile: function(req,res,next){
 			var userID = req.params.id;
 
-			var query = "g.v().transform{[ it, it.out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').count(), it.out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).in('LIKES').count(), it.outE('FOLLOWS').count(), it.inE('FOLLOWS').count() ]}".replace('v()','v('+userID+')');
+			var query = "g.v().transform{[ it, it.out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').count(), it.out('CREATED').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).inE('LIKES').count(), it.outE('FOLLOWS').count(), it.inE('FOLLOWS').count() ]}".replace('v()','v('+userID+')');
 
 			Step(
 				function callGremlin(){
