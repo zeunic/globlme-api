@@ -43,11 +43,15 @@ var User = function(config) {
 	});
 
 	var getUserByEmail = function(userEmail, callback){
-		db.getIndexedNode('user', 'email', userEmail, callback);
+		db.getIndexedNode(INDEX_NAME, 'email', userEmail, callback);
 	};
 
 	var getUserByFacebookID = function(userFacebookID, callback){
-		db.getIndexedNode('user', 'fbID', userFacebookID, callback);
+		db.getIndexedNode(INDEX_NAME, 'fbID', userFacebookID, callback);
+	};
+
+	var getUserByUsername = function(userName, callback) {
+		db.getIndexedNode(INDEX_NAME, 'username', userName, callback);
 	};
 
 	var formatInvites = function(nodes) {
@@ -88,8 +92,6 @@ var User = function(config) {
 					getUserByFacebookID(data.fbID, this.parallel() );
 				},
 				function sendResults(err, resultsByEmail, resultsByFBId){
-					// does logic go here for this?
-
 					var userData = {};
 
 					if(!resultsByEmail && !resultsByFBId) {
@@ -104,11 +106,8 @@ var User = function(config) {
 
 					delete userData.password;
 					res.json({ status: 'success', data: userData });
-
 				}
 			);
-
-			// end or next?
 		},
 		createUser: function(req,res,next){
 			// { username, password (sha256), first, last, email, birthday, sex, location  }
@@ -119,24 +118,47 @@ var User = function(config) {
 
 			// TODO: lucene full text search indexing?
 
-			var newUser = JSON.parse(req.body.data);
-			var userData = {
-				guid: UUID.v1(),
-				username: newUser.username,
-				first: newUser.first,
-				last: newUser.last,
-				email: newUser.email,
-				birthday: newUser.birthday,
-				sex: newUser.sex,
-				location: newUser.location,
-				password: newUser.password,
-				fbID: newUser.fbID || ''
-			};
-
-			var node = db.createNode(userData);
+			var newUser = JSON.parse(req.body.data),
+				userData = {},
+				userNode;
 
 			Step(
-				function saveNode(){
+				function checkUserName(){
+					console.log('check username exists before creating?');
+					getUserByUsername(newUser.username, this);
+				},
+				function createUserObject(err, results) {
+					console.log('calling back, now checking...');
+					if(!err && !results) {
+						console.log('um what?');
+						userData = {
+							guid: UUID.v1(),
+							username: newUser.username,
+							first: newUser.first,
+							last: newUser.last,
+							email: newUser.email,
+							birthday: newUser.birthday,
+							sex: newUser.sex,
+							location: newUser.location,
+							password: newUser.password,
+							fbID: newUser.fbID || '',
+							bio: 'Click edit in the top right to upload a profile photo, change your bio, and change your cover photo. You will need to upload your first moment from the Globl or Me tabs to select a cover photo.'
+						};
+						return userData;
+					} else {
+						// exit and do not save by not returning?
+						console.log(err, results);
+						res.json({ status: "error", message: "Ok so you can't do that because there is already a user name." });
+					}
+				},
+				function createNode(err, newUserObject) {
+					if(newUserObject) {
+						userData = newUserObject;
+						node = db.createNode(userData);
+						return node;
+					}
+				},
+				function saveNode(err, createdNode){
 					node.save(this);
 				},
 				function indexNode(){
