@@ -153,7 +153,8 @@ api.post('/:apiVersion/user/auth', setUpRequest, UserModule.authorizeUser);
 api.post('/:apiVersion/user/create', setUpRequest, UserModule.createUser);
 api.post('/:apiVersion/user/updatePhoto', setUpRequest, UserModule.updatePhoto);
 
-
+// invitations route, not sure where to put this yet
+api.post('/:apiVersion/user/invitations', setUpRequest, UserModule.getInvitations);
 
 api.post('/:apiVersion/feedback', setUpRequest, function(req, res, next){
 	var feedback = JSON.parse(req.body.data).text,

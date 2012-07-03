@@ -50,6 +50,34 @@ var User = function(config) {
 		db.getIndexedNode('user', 'fbID', userFacebookID, callback);
 	};
 
+	var formatInvites = function(nodes) {
+		var inviteResults = [];
+
+		for(var i=0, j=nodes.length; i<j; i++) {
+			var newObj = {},
+				invite = nodes[i][0].data,
+				inviteID = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/relationship/',''),
+				collection = nodes[i][1].data,
+				collectionID = nodes[i][1].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+				collectionMembers = nodes[i][2].data,
+				author = nodes[i][3].data,
+				authorID = nodes[i][3].self.replace('http://10.179.106.202:7474/db/data/node/','');
+
+			delete author.password;
+
+			newObj.author = author;
+			newObj.authorID = authorID;
+			newObj.collection = collection;
+			newObj.collectionID = collectionID;
+			newObj.moments = collectionMembers;
+			newObj.invite = invite;
+			newObj.inviteID = inviteID;
+			inviteResults.push(newObj);
+		}
+
+		return inviteResults;
+	};
+
 	return {
 		checkUserExists: function(req,res,next) {
 			var data = JSON.parse(req.body.data);
@@ -123,10 +151,8 @@ var User = function(config) {
 				function userSaveComplete(err){
 					if(!err) {
 						userData.id = node.id;
-						console.log('hey: ' + userData.id);
 						res.json(  { status: "success", data: userData } );
 					} else {
-						console.log('hey fail: ' + err);
 						res.json( { status: "error", message: err } );
 					}
 				}
@@ -201,7 +227,23 @@ var User = function(config) {
 					}
 				}
 			);
+		},
+		getInvitations: function(req,res,next){
+			var requestData = JSON.parse(req.body.data);
+			var userID = requestData.id;
 
+			var query = "g.v("+userID+").inE('INVITE').transform{[it, it.outV.next(), it.outV.in('MEMBER_OF').toList(), it.outV.in('CREATED').next() ]}";
+
+			Step(
+				function getUserInvitations(){
+					executeGremlin(query, this);
+				},
+				function sendResults(err, results) {
+					// console.log(results);
+					var inviteResults = formatInvites(results.body);
+					res.json({ status: "success", data: inviteResults });
+				}
+			);
 		}
 	};
 };
