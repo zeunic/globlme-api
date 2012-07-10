@@ -131,7 +131,7 @@ var Moment = function(config){
 				},
 				function sendResults(err, results) {
 					momentData.id = momentNode.id;
-
+					console.log(momentData, "created new moment");
 					res.json({ status: 'success', data: momentData });
 				}
 			);

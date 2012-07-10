@@ -97,12 +97,14 @@ var Stream =  function(config){
 
 				var formattedTags =[];
 
-				for(var k=0, l=tags.length; k<l; k++) {
-					var tag = {
-						id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
-						title: tags[k].data.tag
-					};
-					formattedTags.push(tag);
+				if(tags.length) {
+					for(var k=0, l=tags.length; k<l; k++) {
+						var tag = {
+							id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+							title: tags[k].data.tag
+						};
+						formattedTags.push(tag);
+					}
 				}
 
 				var totalLikes = 0;
@@ -218,6 +220,10 @@ var Stream =  function(config){
 		}
 
 		return removedDuplicateResults;
+	};
+
+	var sortByPopular = function(nodes) {
+
 	};
 
 	var FilterMeStream = {
@@ -396,9 +402,8 @@ var Stream =  function(config){
 				},
 				function results(err, res, nodes){
 					var momentResults = formatMoments(nodes);
-
-					callback(undefined, { type: "moments", data: momentResults.reverse() });
-
+					var momentsByRecent = sortByRecent([{ data: momentResults}]);
+					callback(undefined, { type: "moments", data: momentsByRecent });
 				}
 			);
 		}
@@ -541,7 +546,7 @@ var Stream =  function(config){
 			);
 		},
 		deleteNode: function(req,res,next){
-			var nodeID = req.param.id,
+			var nodeID = req.params.id,
 				node;
 
 			Step(
