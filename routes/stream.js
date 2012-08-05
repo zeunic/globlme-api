@@ -4,7 +4,24 @@
  */
 
 
-var request = require('request');
+var request = require('request'),
+	log4js = require('log4js');
+	
+log4js.configure({
+    appenders: [
+        {
+            type: "file",
+            filename: "stream.log",
+            category: [ 'stream' ]
+        },
+        {
+            type: "console"
+        }
+    ],
+    replaceConsole: false
+});
+
+var logger = log4js.getLogger('stream');
 
 var gremlinOptions = {
 	uri: 'http://10.179.106.202:7474/db/data/ext/GremlinPlugin/graphdb/execute_script',
@@ -193,6 +210,9 @@ var Stream =  function(config){
 
 	// takes an array of { type: "(collectionType)", data: [...] } objects and condenses and sorts them by .recent
 	var sortByRecent = function(nodes) {
+		var startTime, endTime;
+		startTime = new Date().getTime();
+
 		var joinedMomentResults = [];
 		for (var i=0, j=nodes.length; i<j; i++) {
 			joinedMomentResults = joinedMomentResults.concat(nodes[i].data);
@@ -219,6 +239,9 @@ var Stream =  function(config){
 			}
 		}
 
+		endTime = new Date().getTime();
+		var timeInfo = 'Moments sorted by recent in: ' + (endTime - startTime) + ' ms';
+		logger.info(timeInfo);
 		return removedDuplicateResults;
 	};
 
@@ -278,7 +301,6 @@ var Stream =  function(config){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
-					console.log('group results back...');
 					var groupsResults = formatMoments(nodes);
 					callback(undefined, { type: "moments", data: groupsResults });
 				}
@@ -317,9 +339,11 @@ var Stream =  function(config){
 		tags: function(filter, callback){
 			var query = "g.v(0).inE('TAGS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}.dedup";
 
+			var startTime, endTime;
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
+					startTime = new Date().getTime();
 				},
 				function results(err, res, nodes){
 					nodes.shift(); // removing the first item might not actually or always work but for now...
@@ -346,6 +370,9 @@ var Stream =  function(config){
 					tagsResults.reverse();
 
 					callback(undefined, { type: "tags", data: tagsResults });
+					endTime = new Date().getTime();
+					var timeInfo = 'Tags fetched from DB in: ' + (endTime - startTime) + ' ms';
+					logger.info(timeInfo);
 				}
 			);
 		},
@@ -353,27 +380,37 @@ var Stream =  function(config){
 			// id, node
 			var query = "g.v(0).inE('USERS_REFERENCE').outV.inE('MEMBER_OF').outV.hasNot('photo', null).transform{[it, it.in('FOLLOWS').toList()]}";
 
+			var startTime, endTime;
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
+					startTime = new Date().getTime();
 				},
 				function results(err, res, nodes){
 					var usersResults = formatUsers(nodes);
 					// usersResults.reverse();
 					callback(undefined, { type:"users", data: usersResults });
+					endTime = new Date().getTime();
+					var timeInfo = 'Users fetched from DB in: ' + (endTime - startTime) + ' ms';
+					logger.info(timeInfo);
 				}
 			);
 		},
 		groups: function(filter, callback){
 			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('GROUPS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[it, it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList(), it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('CREATED').next(), it.in('FOLLOWS').count() ]}";
 
+			var startTime, endTime;
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
+					startTime = new Date().getTime();
 				},
 				function results(err, res, nodes){
 					var groupsResults = formatGroups(nodes);
 					callback(undefined, { type: "groups", data: groupsResults.reverse() });
+					endTime = new Date().getTime();
+					var timeInfo = 'Groups fetched from DB in: ' + (endTime - startTime) + ' ms';
+					logger.info(timeInfo);
 				}
 			);
 		},
@@ -381,29 +418,38 @@ var Stream =  function(config){
 			// imageUrl, tags, title, id
 			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('ADVENTURES_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList(), it.in('CREATED').next() ]}.dedup";
 
+			var startTime, endTime;
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
+					startTime = new Date().getTime();
 				},
 				function results(err, res, nodes){
 					var adventuresResults = formatAdventures(nodes);
 					adventuresResults.reverse();
 					callback(undefined, { type: "adventures", data: adventuresResults });
-
+					endTime = new Date().getTime();
+					var timeInfo = 'Adventures fetched from DB in: ' + (endTime - startTime) + ' ms';
+					logger.info(timeInfo);
 				}
 			);
 		},
 		moments: function(filter, callback){
 			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.inE('LIKES').toList() ] }";
 
+			var startTime, endTime;
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
+					startTime = new Date().getTime();
 				},
 				function results(err, res, nodes){
 					var momentResults = formatMoments(nodes);
 					var momentsByRecent = sortByRecent([{ data: momentResults}]);
 					callback(undefined, { type: "moments", data: momentsByRecent });
+					endTime = new Date().getTime();
+					var timeInfo = 'Moments fetched from DB in: ' + (endTime - startTime) + ' ms';
+					logger.info(timeInfo);
 				}
 			);
 		}
@@ -456,8 +502,10 @@ var Stream =  function(config){
 		getStream: function(req, res, next){
 			var filter = JSON.parse(req.body.data);
 
+			var startTime = new Date().getTime(),
+				endTime;
+
 			if (!filter.types) {
-				console.log('no types, using full...');
 				filter.types = ["moments", "groups", "users","tags", "adventures"];
 			}
 
@@ -471,8 +519,9 @@ var Stream =  function(config){
 					});
 				},
 				function sendResults(err, results){
-					// check for popular or recent sort
-					// run results through sorting.js
+					endTime = new Date().getTime();
+					var timeInfo = 'Stream request fulfilled in: ' + (endTime - startTime) + ' ms';
+					logger.info(timeInfo);
 					res.json({ status: "success", data: results });
 				}
 			);
@@ -482,7 +531,6 @@ var Stream =  function(config){
 				userID = req.params.id;
 
 			if (!filter.types) {
-				console.log('ME no types, using full...');
 				filter.types = ["groups","users","tags","adventures"];
 			}
 
@@ -497,7 +545,6 @@ var Stream =  function(config){
 				},
 				function sendResults(err, results){
 					var resultsByRecent = sortByRecent(results);
-					console.log('ayup');
 					res.json({ status: "success", data: [{ type: "moments", data: resultsByRecent }] });
 				}
 			);
@@ -577,7 +624,7 @@ var Stream =  function(config){
 				function setNode(err, result){
 					rel = result;
 					if (err) {
-						res.json({ status: 'error', message: err });
+						res.json({ status: 'error', message: "Whoops! There was an error performing that action. (Error: Remove Relationship)" });
 					} else {
 						rel.del(this, true);
 					}
@@ -603,8 +650,6 @@ var Stream =  function(config){
 					});
 				},
 				function sendResults(err, results){
-					console.log(results);
-					console.log('search results ^');
 					res.json(results);
 				}
 			);
@@ -613,8 +658,6 @@ var Stream =  function(config){
 			var relData = JSON.parse(req.body.data),
 				fromId = req.params.start,
 				relProperties = relData.data || {};
-
-			console.log(relData, relProperties, fromId);
 
 			Step(
 				function getNodes(){

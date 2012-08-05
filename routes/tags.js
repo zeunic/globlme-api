@@ -24,7 +24,7 @@ var Tag = function(config) {
 	return {
 		createTag: function(req,res,next){
 			var requestData = JSON.parse(req.body.data);
-			var tag = db.createNode({ tag: requestData.tag });
+			var tag = db.createNode({ tag: requestData.tag, date: new Date().getTime() });
 
 			Step(
 				function saveTag(){
@@ -39,11 +39,9 @@ var Tag = function(config) {
 				},
 				function tagSaveComplete(err){
 					if(!err) {
-						console.log('new tag');
 						res.json( { status: "success", data: { id: tag.id } } );
 					} else {
-						console.log('no tag');
-						res.json( { status: "error", message: 'Tag not created' } );
+						res.json( { status: "error", message: 'Unable to create tag.' } );
 					}
 				}
 			);

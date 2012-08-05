@@ -25,7 +25,7 @@ var Moment = function(config){
 			var newMoment = JSON.parse(req.body.data);
 
 			var momentData = {
-				date: newMoment.date,
+				date: new Date().getTime(),
 				focusPoint: newMoment.focusPoint
 			}, momentNode, momentTags, momentUsers, momentImages, momentOwner,
 				momentOriginalImage;
@@ -50,9 +50,13 @@ var Moment = function(config){
 					return 'tags achieved'; // lol?
 				},
 				function getMomentOwner(){
+					console.log(newMoment.userid);
+					console.log('getting that user...');
 					db.getNodeById( newMoment.userid, this);
 				},
 				function saveMomentOwner(err, result){
+					console.log('got the user...');
+					console.log(result);
 					momentOwner = result;
 					return 'moment owner saved';
 				},

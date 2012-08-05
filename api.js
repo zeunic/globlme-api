@@ -96,10 +96,11 @@ var setUpRequest = [validate.validateRequestData, validate.authorizeRequest, val
 
 // placeholder api version precondition
 api.param(':apiVersion', function(req, res, next, apiVersion){
-	if(apiVersion === 'v1') {
+	if(apiVersion === 'v1.1') {
 		next();
 	} else {
-		res.end('Invalid API Version request');
+		res.json({ status: "error", message: "api version invalid, please upgrade your application" });
+		res.end();
 	}
 });
 
@@ -152,6 +153,8 @@ api.post('/:apiVersion/user/exists', setUpRequest, UserModule.checkUserExists);
 api.post('/:apiVersion/user/auth', setUpRequest, UserModule.authorizeUser);
 api.post('/:apiVersion/user/create', setUpRequest, UserModule.createUser);
 api.post('/:apiVersion/user/updatePhoto', setUpRequest, UserModule.updatePhoto);
+
+// api.post('/:apiVersion/magic/lol', setUpRequest, TagModule.magicLol);
 
 // invitations route, not sure where to put this yet
 api.post('/:apiVersion/user/invitations', setUpRequest, UserModule.getInvitations);

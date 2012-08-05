@@ -142,6 +142,7 @@ var User = function(config) {
 							location: newUser.location,
 							password: newUser.password,
 							fbID: newUser.fbID || '',
+							created: new Date().getTime(),
 							bio: 'Click edit in the top right to upload a profile photo, change your bio, and change your cover photo. You will need to upload your first moment from the Globl or Me tabs to select a cover photo.'
 						};
 						return userData;
