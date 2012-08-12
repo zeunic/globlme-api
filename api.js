@@ -26,7 +26,19 @@ var dbConfig = { port: '7474', databaseUrl: '' };
 
 console.log(api.settings.env);
 
-dbConfig.databaseUrl = (api.settings.env == "development") ? "http://localhost" : "http://10.179.106.202";
+switch (api.settings.env) {
+	case "production" :
+		dbConfig.databaseUrl = "http://10.179.106.202";
+		break;
+	case "development" :
+		dbConfig.databaseUrl = "http://10.179.74.14";
+		break;
+	default :
+		dbConfig.databaseUrl = "http://localhost";
+	break;
+}
+
+console.log(dbConfig);
 
 // API Modules
 var UserModule = new User(dbConfig),
@@ -78,10 +90,12 @@ api.configure(function(){
 	api.set('view engine', 'jade');
 	api.use(function(req,res,next){
 		console.log('middleware');
-		if (req.route.path === '/uploads') {
+		if (req.originalUrl === '/v1.1/uploads') {
 			console.log('need to grab async here');
 			ImageModule.acceptAsyncUpload(req,res,next);
 		} else {
+			console.log('uh, no route or path matched?');
+			console.log(req.originalUrl);
 			next();
 		}
 	});
@@ -205,8 +219,16 @@ api.post('/:apiVersion/feedback', setUpRequest, function(req, res, next){
 */
 
 
-if (api.settings.env == "development") {
-	api.listen(8080);
-} else {
-	api.listen(80);
+switch (api.settings.env) {
+	case "production" :
+		api.listen(80);
+		break;
+	case "development" :
+		api.listen(80);
+		console.log('API server started on port %s', api.address().port);
+		break;
+	default :
+		api.listen(3000);
+		console.log('API server started on port %s', api.address().port);
+	break;
 }
