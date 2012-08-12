@@ -110,26 +110,18 @@ var User = function(config) {
 			);
 		},
 		createUser: function(req,res,next){
-			// { username, password (sha256), first, last, email, birthday, sex, location  }
-
-			// TODO: validate incoming user sign up data
-			// TODO: check that existing username does not exist in db
-			// prior to saving new info
-
-			// TODO: lucene full text search indexing?
-
 			var newUser = JSON.parse(req.body.data),
 				userData = {},
 				userNode;
 
 			Step(
-				function checkUserName(){
-					console.log('check username exists before creating?');
-					getUserByUsername(newUser.username, this);
+				function checkUserNameAndEmail(){
+					getUserByUsername(newUser.username, this.parallel() );
+					getUserByEmail(newUser.email, this.parallel() );
 				},
-				function createUserObject(err, results) {
+				function createUserObject(err, resultByUsername, resultByEmail) {
 					console.log('calling back, now checking...');
-					if(!err && !results) {
+					if(!err && !resultByUsername && !resultByEmail) {
 						console.log('um what?');
 						userData = {
 							guid: UUID.v1(),

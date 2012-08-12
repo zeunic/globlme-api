@@ -13,7 +13,7 @@ var validate = require('./modules/validate.js'),
 	Tag = require('./routes/tags.js'),
 	Adventure = require('adventure.js'),
 	Group = require('group.js'),
-	//Images = require('./modules/image.js'),
+	Images = require('image.js'),
 	Step = require('step'),
 	email = require('mailer');
 
@@ -23,6 +23,9 @@ var validate = require('./modules/validate.js'),
 */
 
 var dbConfig = { port: '7474', databaseUrl: '' };
+
+console.log(api.settings.env);
+
 dbConfig.databaseUrl = (api.settings.env == "development") ? "http://localhost" : "http://10.179.106.202";
 
 // API Modules
@@ -31,7 +34,8 @@ var UserModule = new User(dbConfig),
 	StreamModule = new Stream(dbConfig),
 	MomentModule = new Moment(dbConfig),
 	AdventureModule = new Adventure(dbConfig),
-	GroupModule = new Group(dbConfig);
+	GroupModule = new Group(dbConfig),
+	ImageModule = new Images({});
 
 
 /**
@@ -72,10 +76,19 @@ process.on('uncaughtException', function (err) {
 api.configure(function(){
 	api.set('views', __dirname + '/views');
 	api.set('view engine', 'jade');
+	api.use(function(req,res,next){
+		console.log('middleware');
+		if (req.route.path === '/uploads') {
+			console.log('need to grab async here');
+			ImageModule.acceptAsyncUpload(req,res,next);
+		} else {
+			next();
+		}
+	});
 	api.use(express.bodyParser({ uploadDir:'./_uploads' }));
 	api.use(express.methodOverride());
 	api.use(api.router);
-	api.use(express.static(__dirname + '/public'));
+	// api.use(express.static(__dirname + '/public'));
 });
 
 api.configure('development', function(){
@@ -111,6 +124,9 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
  * API Route Definitions and Mappings
  */
 
+api.post('/uploads/', function(req,res,next){
+	
+});
 
 // stream route declarations -> maps to stream.js
 api.post('/:apiVersion/stream', setUpRequest, StreamModule.getStream);
@@ -190,7 +206,7 @@ api.post('/:apiVersion/feedback', setUpRequest, function(req, res, next){
 
 
 if (api.settings.env == "development") {
-	api.listen(3000);
+	api.listen(8080);
 } else {
 	api.listen(80);
 }
