@@ -64,19 +64,21 @@ process.on('uncaughtException', function (err) {
 		"ERROR: " + err +"\r\n" +
 		"STACK: " + err.stack;
 
-	email.send({
-		host: 'smtp.gmail.com',
-		port: '25',
-		to: 'Stephen Rivas Jr <stephen@zeunic.com>',
-		from: 'Globl.me API <social@zeunic.com>',
-		subject: 'WARNING: Globl.me API Error',
-		body: message,
-		username: 'social@zeunic.com',
-		password: '$s4sites',
-		authentication: 'login'
-	}, function(err, result){
-		console.log(err || result);
-	});
+	if(api.settings.env === 'production') {
+		email.send({
+			host: 'smtp.gmail.com',
+			port: '25',
+			to: 'Stephen Rivas Jr <stephen@zeunic.com>',
+			from: 'Globl.me API <social@zeunic.com>',
+			subject: 'WARNING: Globl.me API Error',
+			body: message,
+			username: 'social@zeunic.com',
+			password: '$s4sites',
+			authentication: 'login'
+		}, function(err, result){
+			console.log(err || result);
+		});
+	}
 
 });
 
