@@ -4,7 +4,10 @@
 
 var express = require('express'),
 	format = require('util').format,
-	api = module.exports = express.createServer();
+	api = module.exports = express.createServer(),
+	io = require('socket.io').listen(api);
+
+io.set('log level', 0);
 
 var validate = require('./modules/validate.js'),
 	Stream = require('./routes/stream.js'),
@@ -24,7 +27,7 @@ var validate = require('./modules/validate.js'),
 
 var dbConfig = { port: '7474', databaseUrl: '' };
 
-console.log(api.settings.env);
+console.log("Enviroment: " + api.settings.env);
 
 switch (api.settings.env) {
 	case "production" :
@@ -47,7 +50,7 @@ var UserModule = new User(dbConfig),
 	MomentModule = new Moment(dbConfig),
 	AdventureModule = new Adventure(dbConfig),
 	GroupModule = new Group(dbConfig),
-	ImageModule = new Images({});
+	ImageModule = new Images({ app: api, db: dbConfig, socketIO: io });
 
 
 /**
@@ -55,8 +58,7 @@ var UserModule = new User(dbConfig),
 */
 
 process.on('uncaughtException', function (err) {
-	// console.log('Caught exception: ' + err);
-
+	console.log('Caught exception: ' + err);
 	console.log(err);
 	console.log(err.stack);
 
