@@ -93,13 +93,9 @@ api.configure(function(){
 	api.set('views', __dirname + '/views');
 	api.set('view engine', 'jade');
 	api.use(function(req,res,next){
-		console.log('middleware');
 		if (req.originalUrl === '/v1.1/uploads') {
-			console.log('need to grab async here');
 			ImageModule.acceptAsyncUpload(req,res,next);
 		} else {
-			console.log('uh, no route or path matched?');
-			console.log(req.originalUrl);
 			next();
 		}
 	});

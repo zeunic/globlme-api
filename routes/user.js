@@ -12,6 +12,19 @@ var executeGremlin = function(query, callback) {
 	request(gremlinOptions, callback);
 };
 
+function typeOf(value) {
+	var s = typeof value;
+		if (s === 'object') {
+			if (value) {
+				if (value instanceof Array) {
+					s = 'array';
+				}
+			} else {
+				s = 'null';
+		}
+	}
+	return s;
+}
 
 // util objects & libs
 var Neo4j = require('neo4j'),
@@ -88,24 +101,51 @@ var User = function(config) {
 
 			Step(
 				function lookUpUser(){
-					getUserByEmail(data.email, this.parallel() );
-					getUserByFacebookID(data.fbID, this.parallel() );
+					if(data.fbID && typeof data.fbID !== 'string') {
+						var usersFbIDs = data.fbID,
+							group = this.group();
+
+						usersFbIDs.forEach(function(fbID){
+							getUserByFacebookID(fbID, group());
+						});
+
+						getUserByEmail(data.email, group() );
+					} else {
+						getUserByFacebookID(data.fbID, this.parallel() );
+						getUserByEmail(data.email, this.parallel() );
+					}
 				},
-				function sendResults(err, resultsByEmail, resultsByFBId){
-					var userData = {};
+				function sendResults(err, resultsByFBId, resultsByEmail){
+					var results = {};
 
 					if(!resultsByEmail && !resultsByFBId) {
-						res.json({ status: 'error', message: 'No user found with those credentials.' });
+						results.status = 'error';
+						results.message = 'No user(s) found with those credentials';
 					} else if (resultsByFBId) {
-						userData = resultsByFBId._data.data;
-						userData.id = resultsByFBId.id;
-					} else {
-						userData = resultsByEmail._data.data;
-						userData.id = resultsByEmail.id;
-					}
+						results.status = 'success';
+						results.data = [];
 
-					delete userData.password;
-					res.json({ status: 'success', data: userData });
+						if(typeOf(resultsByFBId) === 'array') {
+							for (var i=0, j=resultsByFBId.length; i<j; i++) {
+								if(resultsByFBId[i]) {
+									var userResult = resultsByFBId[i]._data.data;
+									delete userResult.password;
+									userResult.id = resultsByFBId[i].self.replace('http://10.179.74.14:7474/db/data/node/','');
+									results.data.push(userResult);
+								}
+							}
+						} else {
+							results.data = resultsByFBId._data.data;
+							results.data.id = resultsByFBId.self.replace('http://10.179.74.14:7474/db/data/node/','');
+						}
+
+					} else {
+						results.status = 'success';
+						results.data = resultsByEmail._data.data;
+						results.data.id = resultsByEmail.self.replace('http://10.179.74.14:7474/db/data/node/','');
+						delete results.data.password;
+					}
+					res.json(results);
 				}
 			);
 		},
