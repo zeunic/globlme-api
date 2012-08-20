@@ -73,12 +73,12 @@ var User = function(config) {
 		for(var i=0, j=nodes.length; i<j; i++) {
 			var newObj = {},
 				invite = nodes[i][0].data,
-				inviteID = nodes[i][0].self.replace('http://10.179.106.202:7474/db/data/relationship/',''),
+				inviteID = nodes[i][0].self.split('/').pop(),
 				collection = nodes[i][1].data,
-				collectionID = nodes[i][1].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+				collectionID = nodes[i][1].self.split('/').pop(),
 				collectionMembers = nodes[i][2].data,
 				author = nodes[i][3].data,
-				authorID = nodes[i][3].self.replace('http://10.179.106.202:7474/db/data/node/','');
+				authorID = nodes[i][3].self.split('/').pop();
 
 			delete author.password;
 
@@ -130,19 +130,19 @@ var User = function(config) {
 								if(resultsByFBId[i]) {
 									var userResult = resultsByFBId[i]._data.data;
 									delete userResult.password;
-									userResult.id = resultsByFBId[i].self.replace('http://10.179.74.14:7474/db/data/node/','');
+									userResult.id = resultsByFBId[i].self.split('/').pop();
 									results.data.push(userResult);
 								}
 							}
 						} else {
 							results.data = resultsByFBId._data.data;
-							results.data.id = resultsByFBId.self.replace('http://10.179.74.14:7474/db/data/node/','');
+							results.data.id = resultsByFBId.self.split('/').pop();
 						}
 
 					} else {
 						results.status = 'success';
 						results.data = resultsByEmail._data.data;
-						results.data.id = resultsByEmail.self.replace('http://10.179.74.14:7474/db/data/node/','');
+						results.data.id = resultsByEmail.self.split('/').pop();
 						delete results.data.password;
 					}
 					res.json(results);
@@ -151,50 +151,78 @@ var User = function(config) {
 		},
 		createUser: function(req,res,next){
 			var newUser = JSON.parse(req.body.data),
-				userData = {},
 				userNode;
+
+			var userData = {
+				guid: UUID.v1(),
+				username: newUser.username || 'required',
+				first: newUser.first || 'required',
+				last: newUser.last || 'required',
+				password: newUser.password || 'required',
+				birthday: newUser.birthday || 'required',
+				sex: newUser.sex || 'required',
+				country: newUser.country || 'required',
+				location: newUser.location || 'required',
+				photo: newUser.photo || '',
+				email: newUser.email || 'required',
+				optin: newUser.username || false,
+				fbID: newUser.fbID || '',
+				twitterAccount: newUser.twitterAccount || '',
+				bio: newUser.bio || 'Click edit in the top right to upload a profile photo, change your bio, and change your cover photo. You will need to upload your first moment from the Globl or Me tabs to select a cover photo.'
+			};
+
+			console.log('making a user...', userData);
+
+			// insert a check to see if any props are == 'required'
+			// if so, error
 
 			Step(
 				function checkUserNameAndEmail(){
-					getUserByUsername(newUser.username, this.parallel() );
-					getUserByEmail(newUser.email, this.parallel() );
+					getUserByUsername(userData.username, this.parallel() );
+					getUserByEmail(userData.email, this.parallel() );
 				},
 				function createUserObject(err, resultByUsername, resultByEmail) {
-					console.log('calling back, now checking...');
 					if(!err && !resultByUsername && !resultByEmail) {
 						console.log('um what?');
-						userData = {
-							guid: UUID.v1(),
-							username: newUser.username,
-							first: newUser.first,
-							last: newUser.last,
-							email: newUser.email,
-							birthday: newUser.birthday,
-							sex: newUser.sex,
-							location: newUser.location,
-							password: newUser.password,
-							fbID: newUser.fbID || '',
-							created: new Date().getTime(),
-							bio: 'Click edit in the top right to upload a profile photo, change your bio, and change your cover photo. You will need to upload your first moment from the Globl or Me tabs to select a cover photo.'
-						};
 						return userData;
 					} else {
 						// exit and do not save by not returning?
-						console.log(err, results);
 						res.json({ status: "error", message: "Ok so you can't do that because there is already a user name." });
 					}
 				},
 				function createNode(err, newUserObject) {
 					if(newUserObject) {
+						console.log('new user node');
 						userData = newUserObject;
 						node = db.createNode(userData);
 						return node;
 					}
 				},
+				function uploadImagesToCDN(err, result) {
+					console.log('save images...');
+					if(userData.photo) {
+						console.log('get all the photos...');
+						ImagesModule.storeImagesToCDN(userData.photo, userData.guid, this);
+					} else {
+						return 'no photo given';
+					}
+				},
+				function imagesSavedToCDN(err, results) {
+					if(!err) {
+						console.log('swap token for full URL');
+						console.log(results);
+					} else {
+						console.log('there was an error');
+					}
+
+					return node;
+				},
 				function saveNode(err, createdNode){
-					node.save(this);
+					// node.save(this);
+					console.log('do not pass go');
 				},
 				function indexNode(){
+					console.log('should not fire...');
 					node.index( INDEX_NAME, 'email', newUser.email, this.parallel() );
 					node.index( INDEX_NAME, 'username', newUser.username, this.parallel() );
 					node.index( 'fulltext', 'username', newUser.username, this.parallel() );

@@ -77,7 +77,7 @@ var Stream =  function(config){
 			if(group && tags && moment) {
 				newObj.title = group.data.title;
 				newObj.node = group.data;
-				newObj.id = group.self.replace('http://10.179.106.202:7474/db/data/node/','');
+				newObj.id = group.self.split('/').pop();
 				newObj.author = author.data.username;
 				newObj.numFollowers = numFollowers;
 
@@ -87,7 +87,7 @@ var Stream =  function(config){
 					var el = tags[k];
 
 					var tag = {
-						id: el.self.replace('http://10.179.106.202:7474/db/data/node/',''),
+						id: el.self.split('/').pop(),
 						title: el.data.tag
 					};
 					newObj.tags.push(tag);
@@ -117,7 +117,7 @@ var Stream =  function(config){
 				if(tags.length) {
 					for(var k=0, l=tags.length; k<l; k++) {
 						var tag = {
-							id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+							id: tags[k].self.split('/').pop(),
 							title: tags[k].data.tag
 						};
 						formattedTags.push(tag);
@@ -137,9 +137,9 @@ var Stream =  function(config){
 				newObj.recent = node.data.date;
 				newObj.popularity = node.data.popularity;
 				newObj.tags = formattedTags;
-				newObj.id = node.self.replace('http://10.179.106.202:7474/db/data/node/','');
+				newObj.id = node.self.split('/').pop();
 				newObj.authorUserName = author.data.username;
-				newObj.authorID = author.self.replace('http://10.179.106.202:7474/db/data/node/','');
+				newObj.authorID = author.self.split('/').pop();
 
 				momentResults.push(newObj);
 			}
@@ -155,7 +155,7 @@ var Stream =  function(config){
 				var el = nodes[i][0],
 					followers = nodes[i][1];
 				var newObj = {
-					id: el.self.replace('http://10.179.106.202:7474/db/data/node/',''),
+					id: el.self.split('/').pop(),
 					node: el.data,
 					totalFollowers: followers.length
 				};
@@ -184,7 +184,7 @@ var Stream =  function(config){
 
 					delete author.password;
 
-					newObj.id = adventure.self.replace('http://10.179.106.202:7474/db/data/node/','');
+					newObj.id = adventure.self.split('/').pop();
 					newObj.imageUrl = moment.data.imageUrl;
 					newObj.tags = [];
 					newObj.node = adventure.data;
@@ -193,7 +193,7 @@ var Stream =  function(config){
 
 					for (var k=0, l=tags.length; k<l; k++){
 						var tag = {
-							id: tags[k].self.replace('http://10.179.106.202:7474/db/data/node/',''),
+							id: tags[k].self.split('/').pop(),
 							title: tags[k].data.tag
 						};
 
@@ -265,7 +265,7 @@ var Stream =  function(config){
 					// 		totalMoments = nodes[i][1].length;
 
 					// 	var newObj = {
-					// 		id: tag.self.replace('http://10.179.106.202:7474/db/data/node/',''),
+					// 		id: tag.self.split('/').pop(),
 					// 		title: tag.data.tag,
 					// 		imageUrl: moment.data.imageUrl,
 					// 		focusPoint: moment.data.focusPoint,
@@ -356,7 +356,7 @@ var Stream =  function(config){
 
 						if(tag && tag.self && tag.data && moment.data) {
 							var newObj = {
-								id: tag.self.replace('http://10.179.106.202:7474/db/data/node/',''),
+								id: tag.self.split('/').pop(),
 								title: tag.data.tag,
 								imageUrl: moment.data.imageUrl,
 								focusPoint: moment.data.focusPoint,
@@ -669,7 +669,7 @@ var Stream =  function(config){
 				},
 				function sendResults(err, result){
 					if(result._data && result._data.self) {
-						res.json({ status: 'success', data: result._data.self.replace('http://10.179.106.202:7474/db/data/relationship/','') });
+						res.json({ status: 'success', data: result._data.self.split('/').pop() });
 					} else {
 						res.json({status: 'error', message: 'go away' });
 					}
@@ -718,7 +718,7 @@ var Stream =  function(config){
 				for(var i=0, j=results.length; i<j; i++) {
 						newObj = {
 							node: results[i].data,
-							id: results[i].self.replace('http://10.179.106.202:7474/db/data/node/','')
+							id: results[i].self.split('/').pop()
 						};
 
 						delete newObj.node.password;
@@ -739,12 +739,12 @@ var Stream =  function(config){
 
 					newObj.node = {
 						data: endNode.data,
-						id: endNode.self.replace('http://10.179.106.202:7474/db/data/node/','')
+						id: endNode.self.split('/').pop()
 					};
 
 					newObj.rel = {
 						data: rel.data,
-						id: rel.self.replace('http://10.179.106.202:7474/db/data/relationship/','')
+						id: rel.self.split('/').pop()
 					};
 
 					nodes.push(newObj);
