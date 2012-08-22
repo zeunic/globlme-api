@@ -39,10 +39,6 @@ var Neo4j = require('neo4j'),
 var INDEX_NAME = "user";
 
 var User = function(config) {
-	// TODO
-	// gracefully set up default config values if none are passed in
-	// or throw appropriate errors
-
 	ImagesModule = new Images();
 
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
@@ -151,7 +147,9 @@ var User = function(config) {
 		},
 		createUser: function(req,res,next){
 			var newUser = JSON.parse(req.body.data),
-				userNode;
+				userNode, userFollows;
+
+			console.log('++++++++++++ CREATE USER CALLED ++++++++++++');
 
 			var userData = {
 				guid: UUID.v1(),
@@ -165,23 +163,27 @@ var User = function(config) {
 				location: newUser.location || 'required',
 				photo: newUser.photo || '',
 				email: newUser.email || 'required',
-				optin: newUser.username || false,
+				optin: newUser.optin || false,
 				fbID: newUser.fbID || '',
 				twitterAccount: newUser.twitterAccount || '',
 				bio: newUser.bio || 'Click edit in the top right to upload a profile photo, change your bio, and change your cover photo. You will need to upload your first moment from the Globl or Me tabs to select a cover photo.'
 			};
 
-			console.log('making a user...', userData);
-
-			// insert a check to see if any props are == 'required'
-			// if so, error
+			// this doesn't work, but needs to be checked
+			// for(var prop in userData) {
+			// 	if (userData[prop] == 'required');
+			// 	console.log('required field was missing...');
+			// }
+			// console.log(userData);
 
 			Step(
 				function checkUserNameAndEmail(){
 					getUserByUsername(userData.username, this.parallel() );
 					getUserByEmail(userData.email, this.parallel() );
+					console.log('checking if user exists');
 				},
 				function createUserObject(err, resultByUsername, resultByEmail) {
+					console.log('user checks are done');
 					if(!err && !resultByUsername && !resultByEmail) {
 						console.log('um what?');
 						return userData;
@@ -199,18 +201,15 @@ var User = function(config) {
 					}
 				},
 				function uploadImagesToCDN(err, result) {
-					console.log('save images...');
 					if(userData.photo) {
-						console.log('get all the photos...');
 						ImagesModule.storeImagesToCDN(userData.photo, userData.guid, this);
 					} else {
 						return 'no photo given';
 					}
 				},
 				function imagesSavedToCDN(err, results) {
-					if(!err) {
-						console.log('swap token for full URL');
-						console.log(results);
+					if(!err && results.length) {
+						node._data.data.photo = results[results.length-1];
 					} else {
 						console.log('there was an error');
 					}
@@ -218,11 +217,9 @@ var User = function(config) {
 					return node;
 				},
 				function saveNode(err, createdNode){
-					// node.save(this);
-					console.log('do not pass go');
+					node.save(this);
 				},
 				function indexNode(){
-					console.log('should not fire...');
 					node.index( INDEX_NAME, 'email', newUser.email, this.parallel() );
 					node.index( INDEX_NAME, 'username', newUser.username, this.parallel() );
 					node.index( 'fulltext', 'username', newUser.username, this.parallel() );
@@ -231,11 +228,45 @@ var User = function(config) {
 				function relateUserRef(){
 					node.createRelationshipTo( UserReferenceNode, 'MEMBER_OF', {}, this );
 				},
+				function getUserFollows(){
+					if(newUser.followList.length) {
+						userFollows = [];
+						var group = this.group();
+
+						newUser.followList.forEach(function(userID){
+							console.log('this user knows this guy from facebook: ' + userID);
+							db.getNodeById( parseInt(userID), group() );
+						});
+					} else {
+						return undefined; // is it bad that i don't fucking get this?
+					}
+				},
+				function relateUserFollows(err, results){
+					console.log('make these guys be le follow!');
+					userFollows = results;
+					if(!err && newUser.followList.length && results) {
+						var group = this.group();
+
+						userFollows.forEach(function(user){
+							console.log('le following...');
+							console.log('this user should follows this guy from facebook: ' + user.id);
+							node.createRelationshipTo( user , 'FOLLOWS', {}, group() );
+						});
+					} else {
+						console.log('did not');
+						return undefined; // is it bad that i don't fucking get this?
+					}
+				},
 				function userSaveComplete(err){
+					console.log('got to the end!');
 					if(!err) {
+						console.log(' not an error!');
+						console.dir(arguments);
 						userData.id = node.id;
 						res.json(  { status: "success", data: userData } );
 					} else {
+						console.log('error!');
+						console.dir(arguments);
 						res.json( { status: "error", message: err } );
 					}
 				}

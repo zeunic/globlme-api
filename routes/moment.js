@@ -75,21 +75,21 @@ var Moment = function(config){
 					momentUsers = results;
 					return 'users achieved'; // lol?
 				},
-				function processImageToJpg(){
-					ImagesModule.convertImageToJpg( req.files.image.path, this );
-				},
-				function processImageSizes(err, originalImage){
-					momentOriginalImage = originalImage;
-					ImagesModule.saveImageSizes( req.files.image.path, this );
-				},
-				function storeImageUrls(err, resizedImages){
-					var userGuid = newMoment.userguid;
-					resizedImages.splice(0,0,momentOriginalImage);
-					ImagesModule.storeImagesToCDN(resizedImages, userGuid, this);
+				function uploadImagesToCDN(err, result) {
+					if(newMoment.photo) {
+						console.log('moment owner is...');
+						console.log(momentOwner);
+						console.log('token is...', newMoment.photo);
+						ImagesModule.storeImagesToCDN(newMoment.photo, momentOwner._data.data.guid, this);
+					} else {
+						return 'no photo given';
+					}
 				},
 				function saveMomentNode(err, results){
-					console.log('images stored to CDN...');
-					momentData.imageUrl = results[0].replace('.jpg','');
+					console.log('moment images stored to CDN...');
+					if(results.length) {
+						momentData.imageUrl = results[results.length-1];
+					}
 					momentNode = db.createNode(momentData);
 					momentNode.save(this);
 				},
