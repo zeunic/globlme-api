@@ -132,6 +132,12 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
 });
 
 
+api.all('/*',function(req,res,next){
+	res.header('Access-Control-Allow-Origin' , '*' );
+	next();
+});
+
+
 
 
 /*
@@ -143,7 +149,7 @@ api.post('/uploads/', function(req,res,next){
 });
 
 // stream route declarations -> maps to stream.js
-api.post('/:apiVersion/stream', setUpRequest, StreamModule.getStream);
+api.all('/:apiVersion/stream', setUpRequest, StreamModule.getStream);
 api.post('/:apiVersion/stream/search', setUpRequest, StreamModule.search);
 
 api.post('/:apiVersion/stream/relationships/create/:start', setUpRequest, StreamModule.createRelationship);
@@ -156,6 +162,7 @@ api.post('/:apiVersion/stream/me/:id', setUpRequest, StreamModule.getMeStream);
 api.post('/:apiVersion/stream/adventure/:id', setUpRequest, StreamModule.getAdventure);
 api.post('/:apiVersion/stream/tag/:id', setUpRequest, StreamModule.getTag);
 api.post('/:apiVersion/stream/group/:id', setUpRequest, StreamModule.getGroup);
+api.post('/:apiVersion/stream/getCollection/:id', setUpRequest, StreamModule.getCollection);
 
 // specific routes for getting a user, or a user profile
 api.post('/:apiVersion/stream/profile/:id', setUpRequest, StreamModule.getProfile);
@@ -210,13 +217,14 @@ api.post('/:apiVersion/feedback', setUpRequest, function(req, res, next){
 		console.log(err || result);
 		if(result) res.json({ status: "success", message: "Feedback sent"});
 	});
-
 });
 
 
 /**
 * App Environment / Listen Settings
 */
+
+// console.log(api.routes);
 
 
 switch (api.settings.env) {
@@ -225,7 +233,7 @@ switch (api.settings.env) {
 		break;
 	case "development" :
 		api.listen(80);
-		console.log('API server started on port %s', api.address().port);
+		console.log('(development) API server started on port %s', api.address().port);
 		break;
 	default :
 		api.listen(3000);

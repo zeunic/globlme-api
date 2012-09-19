@@ -39,7 +39,7 @@ var Moment = function(config){
 					if(newMoment.tags.length) {
 						var group = this.group();
 						for (var i=0, j=newMoment.tags.length; i<j; i++) {
-							db.getNodeById( newMoment.tags[i].id, group() );
+							db.getNodeById( newMoment.tags[i], group() );
 						}
 					} else {
 						return [];
@@ -47,16 +47,13 @@ var Moment = function(config){
 				},
 				function storeTags(err, results){
 					momentTags = results;
+					console.log(momentTags);
 					return 'tags achieved'; // lol?
 				},
 				function getMomentOwner(){
-					console.log(newMoment.userid);
-					console.log('getting that user...');
 					db.getNodeById( newMoment.userid, this);
 				},
 				function saveMomentOwner(err, result){
-					console.log('got the user...');
-					console.log(result);
 					momentOwner = result;
 					return 'moment owner saved';
 				},
@@ -65,7 +62,7 @@ var Moment = function(config){
 
 					if(newMoment.users.length) {
 						for (var i=0, j=newMoment.users.length; i<j; i++) {
-							db.getNodeById( newMoment.users[i].id, group() );
+							db.getNodeById( newMoment.users[i], group() );
 						}
 					} else {
 						return [];
@@ -77,9 +74,6 @@ var Moment = function(config){
 				},
 				function uploadImagesToCDN(err, result) {
 					if(newMoment.photo) {
-						console.log('moment owner is...');
-						console.log(momentOwner);
-						console.log('token is...', newMoment.photo);
 						ImagesModule.storeImagesToCDN(newMoment.photo, momentOwner._data.data.guid, this);
 					} else {
 						return 'no photo given';
@@ -113,6 +107,7 @@ var Moment = function(config){
 					if(momentTags.length) {
 						var group = this.group();
 						momentTags.forEach(function(tag){
+							console.log('relate tag: ' + tag.id);
 							momentNode.createRelationshipTo(tag, 'TAGGED_IN', {}, group() );
 						});
 					} else {

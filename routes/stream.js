@@ -3,7 +3,6 @@
  * (finish desc later)
  */
 
-
 var request = require('request'),
 	log4js = require('log4js');
 	
@@ -23,17 +22,6 @@ log4js.configure({
 
 var logger = log4js.getLogger('stream');
 
-var gremlinOptions = {
-	uri: 'http://10.179.106.202:7474/db/data/ext/GremlinPlugin/graphdb/execute_script',
-	method: 'POST',
-	json: {}
-};
-
-var executeGremlin = function(query, callback) {
-	gremlinOptions.json = { script: query };
-	request(gremlinOptions, callback);
-};
-
 var Search = require('search.js'),
 	SearchRels = require('search-rels.js'),
 	Step = require('step'),
@@ -48,6 +36,17 @@ var db,
 
 var Stream =  function(config){
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
+
+	var gremlinOptions = {
+		uri: config.databaseUrl + ':' + config.port + '/db/data/ext/GremlinPlugin/graphdb/execute_script',
+		method: 'POST',
+		json: {}
+	};
+
+	var executeGremlin = function(query, callback) {
+		gremlinOptions.json = { script: query };
+		request(gremlinOptions, callback);
+	};
 
 	// takes any number of objects and merges them in to one object
 	// last object in will overwrite previous object keys
@@ -180,24 +179,35 @@ var Stream =  function(config){
 					author = nodes[i][3],
 					totalMoments = nodes[i][1].length;
 
-				if(adventure && moment && tags) {
-
+				if(adventure) {
 					delete author.password;
 
 					newObj.id = adventure.self.split('/').pop();
-					newObj.imageUrl = moment.data.imageUrl;
+					if (moment) {
+						newObj.imageUrl = moment.data.imageUrl;
+					} else {
+						newObj.imageUrl = '';
+					}
 					newObj.tags = [];
 					newObj.node = adventure.data;
-					newObj.author = author.data.username;
+					newObj.author = author.data.username || null;
 					newObj.totalMoments = totalMoments;
+					newObj.recent = 0;
+					if (adventure.data.startDate) {
+						newObj.recent = adventure.data.startDate;
+					} else {
+						newObj.recent = adventure.data.date;
+					}
 
-					for (var k=0, l=tags.length; k<l; k++){
-						var tag = {
-							id: tags[k].self.split('/').pop(),
-							title: tags[k].data.tag
-						};
+					if(tags) {
+						for (var k=0, l=tags.length; k<l; k++){
+							var tag = {
+								id: tags[k].self.split('/').pop(),
+								title: tags[k].data.tag
+							};
 
-						newObj.tags.push(tag);
+							newObj.tags.push(tag);
+						}
 					}
 
 					adventuresResults.push(newObj);
@@ -240,7 +250,7 @@ var Stream =  function(config){
 		}
 
 		endTime = new Date().getTime();
-		var timeInfo = 'Moments sorted by recent in: ' + (endTime - startTime) + ' ms';
+		var timeInfo = 'Nodes sorted by recent in: ' + (endTime - startTime) + ' ms';
 		logger.info(timeInfo);
 		return removedDuplicateResults;
 	};
@@ -259,20 +269,6 @@ var Stream =  function(config){
 				},
 				function results(err, res, nodes){
 					var tagsResults = formatMoments(nodes);
-					// for(var i=0, j=nodes.length; i<j; i++) {
-					// 	var tag = nodes[i][0][0],
-					// 		moment = nodes[i][1][0],
-					// 		totalMoments = nodes[i][1].length;
-
-					// 	var newObj = {
-					// 		id: tag.self.split('/').pop(),
-					// 		title: tag.data.tag,
-					// 		imageUrl: moment.data.imageUrl,
-					// 		focusPoint: moment.data.focusPoint,
-					// 		totalMoments: totalMoments
-					// 	};
-					// 	tagsResults.push(newObj);
-					// }
 					callback(undefined, { type: "moments", data: tagsResults });
 				}
 			);
@@ -316,7 +312,8 @@ var Stream =  function(config){
 				},
 				function results(err, res, nodes){
 					var adventuresResults = formatMoments(nodes);
-					callback(undefined, { type: "moments", data: adventuresResults });
+					var adventuresByRecent = sortByRecent([ { data: adventuresResults} ]);
+					callback(undefined, { type: "moments", data: adventuresByRecent });
 				}
 			);
 		}//,
@@ -427,7 +424,8 @@ var Stream =  function(config){
 				function results(err, res, nodes){
 					var adventuresResults = formatAdventures(nodes);
 					adventuresResults.reverse();
-					callback(undefined, { type: "adventures", data: adventuresResults });
+					var adventuresByRecent = sortByRecent([{ data: adventuresResults }]);
+					callback(undefined, { type: "adventures", data: adventuresByRecent });
 					endTime = new Date().getTime();
 					var timeInfo = 'Adventures fetched from DB in: ' + (endTime - startTime) + ' ms';
 					logger.info(timeInfo);
@@ -465,21 +463,21 @@ var Stream =  function(config){
 				},
 				function results(err, res, nodes){
 					var momentResults = formatMoments(nodes);
+					var momentsByRecent = sortByRecent([{ data: momentResults }]);
 					callback(undefined, { type: "moments", data: momentResults });
 				}
 			);
 		},
 		adventures: function(userID, callback){
-			var query = "g.v().out('CREATED','MEMBER_OF').out('MEMBER_OF').out('ADVENTURES_REFERENCE').back(2).transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList(), it.in('CREATED').next() ]}.dedup".replace('v()','v('+userID+')');
-
+			var query = "g.v().out('CREATED','MEMBER_OF').out('MEMBER_OF').out('ADVENTURES_REFERENCE').back(2).transform{[ [it], it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList(), it.in('CREATED').next(), it ]}.dedup".replace('v()','v('+userID+')');
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
 					var adventuresResults = formatAdventures(nodes);
-					adventuresResults.reverse();
-					callback(undefined, { type: "adventures", data: adventuresResults });
+					var adventuresByRecent = sortByRecent([{ data: adventuresResults}]);
+					callback(undefined, { type: "adventures", data: adventuresByRecent });
 				}
 			);
 		},
@@ -854,6 +852,34 @@ var Stream =  function(config){
 					res.json({ status: "success", data: [{type: "moments", data: momentsByRecent}, adventures, groups] });
 				}
 			);
+		},
+		getCollection: function(req,res,next){
+			var collectionID = req.params.id,
+				type = req.body.data.type,
+				collectionNode;
+
+			console.log(type);
+			
+			Step(
+				function getCollectionNode(){
+					db.getNodeById(collectionID, this);
+				},
+				function getCollectionSomethings(err, results){
+					collectionNode = results;
+					console.log(collectionNode);
+
+					var script = "g.v("+ collectionNode.id +").transform{ [it, it.in('CREATED').next(), it.in('MEMBER_OF').toList() ] }";
+
+					if(results) {
+						res.json({ status: "success", data: collectionNode });
+					} else if (err) {
+						res.json({ status: "error", message: err });
+					} else {
+						res.json({ status: "error", message: "Unknown Error fetching collection" });
+					}
+				}
+			);
+
 		}
 	};
 };

@@ -8,14 +8,22 @@ var crypto = require('crypto'),
 
 var validateAuthorization = function(data, auth){
 	var sha256 = crypto.createHash('sha256');
-	sha256.update(data + '3912b4f3-c9ab-4e2f-9007-424b5b1d5de6');
+
+	if(typeof data == 'object') {
+		sha256.update(JSON.stringify(data) + '3912b4f3-c9ab-4e2f-9007-424b5b1d5de6');
+	} else {
+		sha256.update(data + '3912b4f3-c9ab-4e2f-9007-424b5b1d5de6');
+	}
+
 	var authConfirm = sha256.digest('hex');
 
 	return (authConfirm === auth);
 };
 
 exports.defineRequestAction = function defineRequestAction(req,res,next) {
-	// not using this at the moment
+	if(typeof req.body.data == 'object') {
+		req.body.data = JSON.stringify(req.body.data);
+	}
 	next();
 };
 
@@ -42,7 +50,6 @@ exports.authorizeRequest = function authorizeRequest(req,res,next){
 	if (isAuthorized) {
 		next();
 	} else {
-		// res.writeHead(401, {'Content-Type': 'application/json'});
 		res.end("Unauthorized API access.");
 	}
 };

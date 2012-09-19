@@ -1,17 +1,6 @@
 // user.js routes
 var request = require('request');
 
-var gremlinOptions = {
-	uri: 'http://10.179.106.202:7474/db/data/ext/GremlinPlugin/graphdb/execute_script',
-	method: 'POST',
-	json: {}
-};
-
-var executeGremlin = function(query, callback) {
-	gremlinOptions.json = { script: query };
-	request(gremlinOptions, callback);
-};
-
 function typeOf(value) {
 	var s = typeof value;
 		if (s === 'object') {
@@ -50,6 +39,17 @@ var User = function(config) {
 			UserReferenceNode = nodes[0]['user_ref'];
 		}
 	});
+
+	var gremlinOptions = {
+		uri: config.databaseUrl + ':' + config.port + '/db/data/ext/GremlinPlugin/graphdb/execute_script',
+		method: 'POST',
+		json: {}
+	};
+
+	var executeGremlin = function(query, callback) {
+		gremlinOptions.json = { script: query };
+		request(gremlinOptions, callback);
+	};
 
 	var getUserByEmail = function(userEmail, callback){
 		db.getIndexedNode(INDEX_NAME, 'email', userEmail, callback);
@@ -149,8 +149,6 @@ var User = function(config) {
 			var newUser = JSON.parse(req.body.data),
 				userNode, userFollows;
 
-			console.log('++++++++++++ CREATE USER CALLED ++++++++++++');
-
 			var userData = {
 				guid: UUID.v1(),
 				username: newUser.username || 'required',
@@ -169,10 +167,16 @@ var User = function(config) {
 				bio: newUser.bio || 'Click edit in the top right to upload a profile photo, change your bio, and change your cover photo. You will need to upload your first moment from the Globl or Me tabs to select a cover photo.'
 			};
 
+			/*
+			{
+				followList: followList,
+			}
+			*/
+
 			// this doesn't work, but needs to be checked
 			// for(var prop in userData) {
-			// 	if (userData[prop] == 'required');
-			// 	console.log('required field was missing...');
+			//	if (userData[prop] == 'required');
+			//	console.log('required field was missing...');
 			// }
 			// console.log(userData);
 
@@ -180,12 +184,9 @@ var User = function(config) {
 				function checkUserNameAndEmail(){
 					getUserByUsername(userData.username, this.parallel() );
 					getUserByEmail(userData.email, this.parallel() );
-					console.log('checking if user exists');
 				},
 				function createUserObject(err, resultByUsername, resultByEmail) {
-					console.log('user checks are done');
 					if(!err && !resultByUsername && !resultByEmail) {
-						console.log('um what?');
 						return userData;
 					} else {
 						// exit and do not save by not returning?
@@ -194,10 +195,9 @@ var User = function(config) {
 				},
 				function createNode(err, newUserObject) {
 					if(newUserObject) {
-						console.log('new user node');
 						userData = newUserObject;
-						node = db.createNode(userData);
-						return node;
+						userNode = db.createNode(userData);
+						return userNode;
 					}
 				},
 				function uploadImagesToCDN(err, result) {
@@ -209,24 +209,24 @@ var User = function(config) {
 				},
 				function imagesSavedToCDN(err, results) {
 					if(!err && results.length) {
-						node._data.data.photo = results[results.length-1];
+						userNode._data.data.photo = results[results.length-1];
 					} else {
-						console.log('there was an error');
+						// UH...
 					}
 
-					return node;
+					return userNode;
 				},
 				function saveNode(err, createdNode){
-					node.save(this);
+					userNode.save(this);
 				},
 				function indexNode(){
-					node.index( INDEX_NAME, 'email', newUser.email, this.parallel() );
-					node.index( INDEX_NAME, 'username', newUser.username, this.parallel() );
-					node.index( 'fulltext', 'username', newUser.username, this.parallel() );
-					if (newUser.fbID) { node.index( INDEX_NAME, 'fbID', newUser.fbID, this.parallel() ); }
+					userNode.index( INDEX_NAME, 'email', newUser.email, this.parallel() );
+					userNode.index( INDEX_NAME, 'username', newUser.username, this.parallel() );
+					userNode.index( 'fulltext', 'username', newUser.username, this.parallel() );
+					if (newUser.fbID) { userNode.index( INDEX_NAME, 'fbID', newUser.fbID, this.parallel() ); }
 				},
 				function relateUserRef(){
-					node.createRelationshipTo( UserReferenceNode, 'MEMBER_OF', {}, this );
+					userNode.createRelationshipTo( UserReferenceNode, 'MEMBER_OF', {}, this );
 				},
 				function getUserFollows(){
 					if(newUser.followList.length) {
@@ -234,7 +234,6 @@ var User = function(config) {
 						var group = this.group();
 
 						newUser.followList.forEach(function(userID){
-							console.log('this user knows this guy from facebook: ' + userID);
 							db.getNodeById( parseInt(userID), group() );
 						});
 					} else {
@@ -242,31 +241,22 @@ var User = function(config) {
 					}
 				},
 				function relateUserFollows(err, results){
-					console.log('make these guys be le follow!');
 					userFollows = results;
 					if(!err && newUser.followList.length && results) {
 						var group = this.group();
 
 						userFollows.forEach(function(user){
-							console.log('le following...');
-							console.log('this user should follows this guy from facebook: ' + user.id);
-							node.createRelationshipTo( user , 'FOLLOWS', {}, group() );
+							userNode.createRelationshipTo( user , 'FOLLOWS', {}, group() );
 						});
 					} else {
-						console.log('did not');
 						return undefined; // is it bad that i don't fucking get this?
 					}
 				},
 				function userSaveComplete(err){
-					console.log('got to the end!');
 					if(!err) {
-						console.log(' not an error!');
-						console.dir(arguments);
-						userData.id = node.id;
+						userData.id = userNode.id;
 						res.json(  { status: "success", data: userData } );
 					} else {
-						console.log('error!');
-						console.dir(arguments);
 						res.json( { status: "error", message: err } );
 					}
 				}
