@@ -25,14 +25,17 @@ var logger = log4js.getLogger('stream');
 var Search = require('search.js'),
 	SearchRels = require('search-rels.js'),
 	Step = require('step'),
-	Neo4j = require('neo4j');
+	Neo4j = require('neo4j'),
+	Format = require('format.js');
+
 
 var db,
 	TAGS_REFERENCE,
 	USERS_REFERENCE,
 	GROUPS_REFERENCE,
 	ADVENTURES_REFERENCE,
-	MOMENTS_REFERENCE;
+	MOMENTS_REFERENCE,
+	FormatUtil = new Format();
 
 var Stream =  function(config){
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
@@ -855,28 +858,64 @@ var Stream =  function(config){
 		},
 		getCollection: function(req,res,next){
 			var collectionID = req.params.id,
-				type = req.body.data.type,
+				collectionType = JSON.parse(req.body.data).type,
 				collectionNode;
 
-			console.log(type);
-			
+			console.log(collectionType);
+
 			Step(
 				function getCollectionNode(){
 					db.getNodeById(collectionID, this);
 				},
-				function getCollectionSomethings(err, results){
+				function getCollectionData(err, results){
 					collectionNode = results;
-					console.log(collectionNode);
 
-					var script = "g.v("+ collectionNode.id +").transform{ [it, it.in('CREATED').next(), it.in('MEMBER_OF').toList() ] }";
+					var defineSteps = _Global.gremlinStep.creator +
+						_Global.gremlinStep.memberOf +
+						_Global.gremlinStep.followers +
+						_Global.gremlinStep.comments +
+						_Global.gremlinStep.likes +
+						_Global.gremlinStep.tags +
+						_Global.gremlinStep.usersIn;
 
-					if(results) {
-						res.json({ status: "success", data: collectionNode });
-					} else if (err) {
-						res.json({ status: "error", message: err });
-					} else {
-						res.json({ status: "error", message: "Unknown Error fetching collection" });
+					switch (collectionType) {
+						case 'adventure' :
+							defineSteps = defineSteps + _Global.gremlinStep.advMoments;
+							console.log('adventure steps');
+							break;
+						case 'user' :
+							defineSteps = defineSteps + _Global.gremlinStep.advMoments;
+							console.log('user steps');
+							break;
+						case 'tag' :
+							defineSteps = defineSteps + _Global.gremlinStep.advMoments;
+							console.log('tag steps');
+							break;
 					}
+
+					var script = defineSteps + "g.v(" + collectionNode.id + ").transform{[ it, it.creator.next(), it.member_of.toList(), it.followers.toList(), it.adv_moments.toList()]}";
+
+					executeGremlin(script, this);
+				},
+				function sendResults(err, response, results) {
+					var collection = results[0],
+						adventure = FormatUtil.adventure(collection[0]),
+						creator = FormatUtil.user(collection[1]),
+						members = FormatUtil.users( collection[2] ),
+						followers = FormatUtil.users( collection[3] ),
+						moments = collection[4];
+
+					var collectionObject = {
+						id: adventure.id,
+						title: adventure.title,
+						creator: creator,
+						members: members,
+						followers: followers,
+						moments: FormatUtil.moments(moments)
+					};
+
+					// console.log(FormatUtil.graphID( adventure.self ), FormatUtil.graphID( creator.self ), users_in.length, followers.length, moments.length);
+					res.json({status: "success", data: collectionObject });
 				}
 			);
 

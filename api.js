@@ -21,6 +21,10 @@ var validate = require('./modules/validate.js'),
 	email = require('mailer');
 
 
+// Contants - Global Variables
+_Global= require('constants.js');
+
+
 /**
 * Database Connection / Configuration Settings
 */
