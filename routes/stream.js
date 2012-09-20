@@ -856,63 +856,96 @@ var Stream =  function(config){
 				}
 			);
 		},
-		getCollection: function(req,res,next){
+		getCollection: function(req,res,next) {
+
 			var collectionID = req.params.id,
-				collectionType = JSON.parse(req.body.data).type,
+				reqBody = JSON.parse(req.body.data),
+				collectionType = reqBody.type,
+				includeMoments = reqBody.moments,
 				collectionNode;
 
-			console.log(collectionType);
+			var defineSteps = _Global.gremlinStep.creator +
+				_Global.gremlinStep.memberOf +
+				_Global.gremlinStep.followers +
+				_Global.gremlinStep.comments +
+				_Global.gremlinStep.likes +
+				_Global.gremlinStep.tags +
+				_Global.gremlinStep.usersIn;
+
+			var script = "g.v(" + collectionID + ")";
+
+			switch (collectionType) {
+				case 'adventure' :
+					script = script + _Global.gremlinStep.advCollectionScript;
+					break;
+				case 'user' :
+					script = script + _Global.gremlinStep.usrCollectionScript;
+					break;
+				case 'tag' :
+					script = script + _Global.gremlinStep.tagCollectionScript;
+					break;
+			}
 
 			Step(
 				function getCollectionNode(){
 					db.getNodeById(collectionID, this);
+					// may not need to verify this as the next one should fail just as quick?
 				},
 				function getCollectionData(err, results){
 					collectionNode = results;
 
-					var defineSteps = _Global.gremlinStep.creator +
-						_Global.gremlinStep.memberOf +
-						_Global.gremlinStep.followers +
-						_Global.gremlinStep.comments +
-						_Global.gremlinStep.likes +
-						_Global.gremlinStep.tags +
-						_Global.gremlinStep.usersIn;
-
-					switch (collectionType) {
-						case 'adventure' :
-							defineSteps = defineSteps + _Global.gremlinStep.advMoments;
-							console.log('adventure steps');
-							break;
-						case 'user' :
-							defineSteps = defineSteps + _Global.gremlinStep.advMoments;
-							console.log('user steps');
-							break;
-						case 'tag' :
-							defineSteps = defineSteps + _Global.gremlinStep.advMoments;
-							console.log('tag steps');
-							break;
+					if(includeMoments) {
+						switch (collectionType) {
+							case 'adventure' :
+								defineSteps = defineSteps + _Global.gremlinStep.advMoments;
+								script = script.replace(']}', ', it.adv_moments.toList() ]}');
+								break;
+							case 'user' :
+								defineSteps = defineSteps + _Global.gremlinStep.usrMoments;
+								script = script.replace(']}', ', it.user_moments.toList() ]}');
+								break;
+							case 'tag' :
+								defineSteps = defineSteps + _Global.gremlinStep.tagMoments;
+								script = script.replace(']}', ', it.tag_moments.toList() ]}');
+								break;
+						}
 					}
 
-					var script = defineSteps + "g.v(" + collectionNode.id + ").transform{[ it, it.creator.next(), it.member_of.toList(), it.followers.toList(), it.adv_moments.toList()]}";
-
-					executeGremlin(script, this);
+					// res.json({ status: 'success', data: script });
+					executeGremlin(defineSteps + script, this);
 				},
 				function sendResults(err, response, results) {
 					var collection = results[0],
-						adventure = FormatUtil.adventure(collection[0]),
-						creator = FormatUtil.user(collection[1]),
-						members = FormatUtil.users( collection[2] ),
-						followers = FormatUtil.users( collection[3] ),
-						moments = collection[4];
+						creator, members, followers, moments, node;
 
-					var collectionObject = {
-						id: adventure.id,
-						title: adventure.title,
-						creator: creator,
-						members: members,
-						followers: followers,
-						moments: FormatUtil.moments(moments)
-					};
+					var collectionObject = {};
+
+					switch (collectionType) {
+						case 'adventure' :
+							node = FormatUtil.adventureNode(collection[0]);
+							collectionObject.creator = FormatUtil.user(collection[1]);
+							collectionObject.members = FormatUtil.users(collection[2]);
+							collectionObject.followers = FormatUtil.users(collection[3]);
+							moments = collection[4];
+							break;
+						case 'user' :
+							node = FormatUtil.userNode(collection[0]);
+							collectionObject.followers = FormatUtil.users(collection[1]);
+							moments = collection[2];
+							break;
+						case 'tag' :
+							node = FormatUtil.tagNode(collection[0]);
+							collectionObject.followers = FormatUtil.users(collection[1]);
+							moments = collection[2];
+							break;
+					}
+
+					collectionObject.id = node.id,
+					collectionObject.title = node.title;
+
+					if(includeMoments) {
+						collectionObject.moments = FormatUtil.moments( moments );
+					}
 
 					// console.log(FormatUtil.graphID( adventure.self ), FormatUtil.graphID( creator.self ), users_in.length, followers.length, moments.length);
 					res.json({status: "success", data: collectionObject });
