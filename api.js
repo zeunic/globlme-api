@@ -123,7 +123,7 @@ api.configure('production', function(){
 */
 
 // Route preconditions to set up a valid and authorized request and request data
-var setUpRequest = [validate.validateRequestData, validate.authorizeRequest, validate.defineRequestAction];
+var setUpRequest = [validate.validateRequestData, validate.defineRequestAction, validate.authorizeRequest];
 
 // placeholder api version precondition
 api.param(':apiVersion', function(req, res, next, apiVersion){
@@ -135,13 +135,11 @@ api.param(':apiVersion', function(req, res, next, apiVersion){
 	}
 });
 
-
+// this needs removed when not in debug mode
 api.all('/*',function(req,res,next){
 	res.header('Access-Control-Allow-Origin' , '*' );
 	next();
 });
-
-
 
 
 /*
@@ -166,7 +164,7 @@ api.post('/:apiVersion/stream/me/:id', setUpRequest, StreamModule.getMeStream);
 api.post('/:apiVersion/stream/adventure/:id', setUpRequest, StreamModule.getAdventure);
 api.post('/:apiVersion/stream/tag/:id', setUpRequest, StreamModule.getTag);
 api.post('/:apiVersion/stream/group/:id', setUpRequest, StreamModule.getGroup);
-api.post('/:apiVersion/stream/getCollection/:id', setUpRequest, StreamModule.getCollection);
+api.post('/:apiVersion/collection/:id', setUpRequest, StreamModule.getCollection);
 
 // specific routes for getting a user, or a user profile
 api.post('/:apiVersion/stream/profile/:id', setUpRequest, StreamModule.getProfile);

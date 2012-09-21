@@ -24,6 +24,7 @@ exports.defineRequestAction = function defineRequestAction(req,res,next) {
 	if(typeof req.body.data == 'object') {
 		req.body.data = JSON.stringify(req.body.data);
 	}
+
 	next();
 };
 
