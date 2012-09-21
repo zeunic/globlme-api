@@ -40,6 +40,8 @@ var db,
 var Stream =  function(config){
 	db = new Neo4j.GraphDatabase(config.databaseUrl + ':' + config.port);
 
+	var SearchModule = new Search(db);
+
 	var gremlinOptions = {
 		uri: config.databaseUrl + ':' + config.port + '/db/data/ext/GremlinPlugin/graphdb/execute_script',
 		method: 'POST',
@@ -636,22 +638,43 @@ var Stream =  function(config){
 			);
 		},
 		search: function(req,res,next){
-			var searchFilter = JSON.parse(req.body.data);
-			// { types: ['tags','users'], query: STRING }
-
-			var SearchModule = new Search(searchFilter.query, db);
+			var searchFilter = JSON.parse(req.body.data),
+				types= searchFilter.types,
+				query = searchFilter.query,
+				users, tags, adventures;
 
 			Step(
-				function startSearches(){
-					var group = this.group();
-					searchFilter.types.forEach(function(type){
-						if(SearchModule[type]) {
-							SearchModule[type]( group() );
-						}
-					});
+				function searchUsers(){
+					if(types.users) {
+						SearchModule.searchAll(query, 'username', this);
+					} else {
+						this(undefined, []);
+					}
 				},
-				function sendResults(err, results){
-					res.json(results);
+				function searchTags(err, userResults){
+					users = userResults;
+					if(types.tags) {
+						SearchModule.searchAll(query, 'tag', this);
+					} else {
+						this(undefined, []);
+					}
+				},
+				function searchAdventures(err, tagResults){
+					console.dir(arguments);
+					console.log('search adventures?');
+					tags = tagResults;
+					if(types.adventures) {
+						SearchModule.searchAll(query, 'title', this);
+					} else {
+						this();
+					}
+				},
+				function sendResults(err, advResults){
+					adventures = advResults;
+
+					console.log('users: ', users);
+					console.log('tags: ', tags);
+					console.log('adventures: ', adventures);
 				}
 			);
 		},
