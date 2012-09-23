@@ -673,6 +673,25 @@ var Stream =  function(config){
 				}
 			);
 		},
+		oldSearch: function(req,res,next) {
+			var filter = JSON.parse(req.body.data);
+
+			Step(
+				function startSearches(){
+					var group = this.group();
+					filter.types.forEach(function(type){
+						if(SearchModule[type]) {
+							SearchModule[type](filter.query, group() );
+						}
+					});
+				},
+				function sendResults(err, results){
+					if(!err) {
+						res.json(results);
+					}
+				}
+			);
+		},
 		createRelationship: function(req,res,next){
 			var relData = JSON.parse(req.body.data),
 				fromId = req.params.start,

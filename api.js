@@ -153,6 +153,7 @@ api.post('/uploads/', function(req,res,next){
 // stream route declarations -> maps to stream.js
 api.all('/:apiVersion/stream', setUpRequest, StreamModule.getStream);
 api.post('/:apiVersion/stream/search', setUpRequest, StreamModule.search);
+api.post('/:apiVersion/stream/oldSearch', setUpRequest, StreamModule.oldSearch);
 
 api.post('/:apiVersion/stream/relationships/create/:start', setUpRequest, StreamModule.createRelationship);
 api.post('/:apiVersion/stream/relationships', setUpRequest, StreamModule.searchRelationships);
