@@ -20,6 +20,7 @@ var Neo4j = require('neo4j'),
 	UUID = require('node-uuid'),
 	Step = require('step'),
 	Images = require('image'),
+	apn = require('apn'),
 	db,
 	UserReferenceNode,
 	ImagesModule;
@@ -348,6 +349,56 @@ var User = function(config) {
 					res.json({ status: "success", data: inviteResults });
 				}
 			);
+		},
+		pushNotification: function(req,res,next) {
+			var notifyData = JSON.parse(req.body.data),
+				pushToken;
+
+			console.log(notifyData);
+
+			Step(function getUser(){
+				db.getNodeById(notifyData.id, this);
+			}, function checkPushToken(err, user){
+				if(!err && user._data && user._data.data) {
+					pushToken = user._data.data.pushToken;
+					if(pushToken) {
+						this(undefined, user);
+					}
+				}
+			}, function sendNotification(){
+				var options = {
+					cert: 'cert/cert.pem',                 /* Certificate file path */
+					certData: null,                   /* String or Buffer containing certificate data, if supplied uses this instead of cert file path */
+					key:  'cert/key.pem',                  /* Key file path */
+					keyData: null,                    /* String or Buffer containing key data, as certData */
+					passphrase: null,                 /* A passphrase for the Key file */
+					ca: null,                         /* String or Buffer of CA data to use for the TLS connection */
+					gateway: 'gateway.sandbox.push.apple.com',/* gateway address */
+					port: 2195,                       /* gateway port */
+					enhanced: true,                   /* enable enhanced format */
+					errorCallback: function(err, notification){
+						console.log('apn error');
+						console.dir(arguments);
+					},         /* Callback when error occurs function(err,notification) */
+					cacheLength: 100                  /* Number of notifications to cache for error purposes */
+				};
+
+				var apnsConnection = new apn.Connection(options);
+
+				var userDevice = new apn.Device(pushToken);
+
+				var note = new apn.Notification();
+				note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
+				note.badge = 13;
+				note.sound = notifyData.sound;
+				note.alert = notifyData.alert;
+				note.payload = {'messageFrom': 'Stephen'};
+				note.device = userDevice;
+
+				apnsConnection.sendNotification(note);
+
+				console.log('send notification to: ' + pushToken);
+			});
 		}
 	};
 };
