@@ -652,7 +652,7 @@ var Stream =  function(config){
 					}
 				},
 				function searchTags(err, userResults){
-					users = userResults;
+					users = FormatUtil.users( userResults );
 					if(types.tags) {
 						SearchModule.searchAll(query, 'tag', this);
 					} else {
@@ -660,21 +660,16 @@ var Stream =  function(config){
 					}
 				},
 				function searchAdventures(err, tagResults){
-					console.dir(arguments);
-					console.log('search adventures?');
-					tags = tagResults;
+					tags = FormatUtil.tags( tagResults );
 					if(types.adventures) {
 						SearchModule.searchAll(query, 'title', this);
 					} else {
-						this();
+						this(undefined, []);
 					}
 				},
 				function sendResults(err, advResults){
-					adventures = advResults;
-
-					console.log('users: ', users);
-					console.log('tags: ', tags);
-					console.log('adventures: ', adventures);
+					adventures = FormatUtil.adventures( advResults );
+					res.json({ status: "success", data: { users: users, tags: tags, adventures: adventures } });
 				}
 			);
 		},
