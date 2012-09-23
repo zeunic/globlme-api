@@ -388,11 +388,11 @@ var User = function(config) {
 				var userDevice = new apn.Device(pushToken);
 
 				var note = new apn.Notification();
-				note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
-				note.badge = 13;
+				// note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
+				note.badge = notifyData.badge;
 				note.sound = notifyData.sound;
 				note.alert = notifyData.alert;
-				note.payload = {'messageFrom': 'Stephen'};
+				note.payload = notifyData.payload;
 				note.device = userDevice;
 
 				apnsConnection.sendNotification(note);
