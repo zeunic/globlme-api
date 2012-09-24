@@ -36,7 +36,7 @@ var Tag = function(config) {
 					if(!err && results) {
 						var existingTag = results._data.data;
 						existingTag.id = FormatUtil.graphID( results._data.self );
-						res.json({ status: "success", data: existingTag});
+						res.json({ status: "success", data: { id: existingTag.id }  });
 					} else {
 						tag.save(this);
 					}
