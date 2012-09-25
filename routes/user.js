@@ -387,9 +387,11 @@ var User = function(config) {
 
 				var userDevice = new apn.Device(pushToken);
 
+				var badgeValueBugFucker = parseInt(notifyData.badge, 10);
+
 				var note = new apn.Notification();
 				// note.expiry = Math.floor(Date.now() / 1000) + 3600; // Expires 1 hour from now.
-				note.badge = notifyData.badge;
+				note.badge = badgeValueBugFucker;
 				note.sound = notifyData.sound;
 				note.alert = notifyData.alert;
 				note.payload = notifyData.payload;
