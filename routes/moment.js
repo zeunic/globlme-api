@@ -34,8 +34,36 @@ var Moment = function(config){
 				momentData.title = newMoment.title;
 			}
 
+			if(newMoment.edit && newMoment.date) {
+				momentData.date = newMoment.date;
+			}
+
+			if(newMoment.edit && newMoment.id) {
+				momentData.oldID = newMoment.id;
+			}
+
 			Step(
+				function getNodeIfUpdate(){
+					if (newMoment.edit) {
+						console.log('editing, get node...');
+						db.getNodeById(newMoment.id, this);
+					} else {
+						this(undefined, undefined);
+					}
+				},
+				function deleteNodeIfUpdate(err, result){
+					if (newMoment.edit && result) {
+						console.log('editing, had a node...');
+						result.del(this, true);
+					} else {
+						this();
+					}
+				},
 				function getTags(){
+					if(newMoment.edit) {
+						console.log('previous delete steps would have ran by now');
+						console.log('should be fake updating now as:' + momentData.oldID + ' | ' + momentData.date);
+					}
 					if(newMoment.tags.length) {
 						var group = this.group();
 						for (var i=0, j=newMoment.tags.length; i<j; i++) {
@@ -47,7 +75,6 @@ var Moment = function(config){
 				},
 				function storeTags(err, results){
 					momentTags = results;
-					console.log(momentTags);
 					return 'tags achieved'; // lol?
 				},
 				function getMomentOwner(){
@@ -80,8 +107,11 @@ var Moment = function(config){
 					}
 				},
 				function saveMomentNode(err, results){
-					console.log('moment images stored to CDN...');
-					if(results.length) {
+					if(newMoment.edit) {
+						momentData.imageUrl = newMoment.imageUrl;
+						console.log('do not update image url');
+					}
+					else if(!newMoment.edit && results.length) {
 						momentData.imageUrl = results[results.length-1];
 					}
 					momentNode = db.createNode(momentData);

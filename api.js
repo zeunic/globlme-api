@@ -181,6 +181,16 @@ api.post('/:apiVersion/tag/create', setUpRequest, TagModule.createTag);
 
 // moment specific routes -> maps to ./routes/moment.js
 api.post('/:apiVersion/moment/create',setUpRequest, MomentModule.createMoment);
+api.post('/:apiVersion/moment/edit',setUpRequest, function(req, res, next){
+	var reqData = JSON.parse(req.body.data);
+
+	if(reqData.edit && reqData.id) {
+		next();
+	} else {
+		console.log('pre-req did not pass');
+	}
+
+}, MomentModule.createMoment);
 
 // moment specific routes -> maps to ./routes/adventure.js
 api.post('/:apiVersion/adventure/create',setUpRequest, AdventureModule.create);
