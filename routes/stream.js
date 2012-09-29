@@ -182,7 +182,8 @@ var Stream =  function(config){
 					moment = nodes[i][1][0],
 					tags = nodes[i][2],
 					author = nodes[i][3],
-					totalMoments = nodes[i][1].length;
+					totalMoments = nodes[i][1].length,
+					adventureMoments = FormatUtil.moments ( nodes[i][4] );
 
 				if(adventure) {
 					delete author.password;
@@ -193,16 +194,23 @@ var Stream =  function(config){
 					} else {
 						newObj.imageUrl = '';
 					}
+
 					newObj.tags = [];
 					newObj.node = adventure.data;
 					newObj.author = author.data.username || null;
 					newObj.totalMoments = totalMoments;
 					newObj.recent = 0;
+					newObj.adventureMoments = adventureMoments.data;
+					newObj.totalLikes = adventureMoments.totalLikes;
+
+
 					if (adventure.data.startDate) {
 						newObj.recent = adventure.data.startDate;
 					} else {
 						newObj.recent = adventure.data.date;
 					}
+
+					newObj.node.date = newObj.recent;
 
 					if(tags) {
 						for (var k=0, l=tags.length; k<l; k++){
@@ -261,7 +269,46 @@ var Stream =  function(config){
 	};
 
 	var sortByPopular = function(nodes) {
+		var startTime, endTime;
+		startTime = new Date().getTime();
 
+		var joinedMomentResults = [];
+		for (var i=0, j=nodes.length; i<j; i++) {
+			joinedMomentResults = joinedMomentResults.concat(nodes[i].data);
+		}
+
+		// TODO: Move to a sorting file / object
+
+		joinedMomentResults.sort(function(a,b){
+			var aDecayLikes = a.totalLikes /  ( (new Date().getTime() - a.node.date) / 1000 / 60 / 60 / 24 );
+			var bDecayLikes = b.totalLikes / ( (new Date().getTime() - b.node.date) / 1000 / 60 / 60 / 24 );
+
+			if(aDecayLikes < bDecayLikes)
+				return 1;
+			return -1;
+		});
+
+		/*
+		//TODO: Move to a sorting / duplicate remover / ranking file
+		var removedDuplicateResults = [];
+		for (var k=0, l=joinedMomentResults.length; k<l; k++) {
+			if(joinedMomentResults[k+1]) {
+				if(joinedMomentResults[k+1].recent == joinedMomentResults[k].recent) {
+					// console.log('found dupe');
+				} else {
+					removedDuplicateResults.push(joinedMomentResults[k]);
+				}
+			} else {
+				removedDuplicateResults.push(joinedMomentResults[k]);
+			}
+		} */
+
+		endTime = new Date().getTime();
+		var timeInfo = 'Nodes sorted by popularity in: ' + (endTime - startTime) + ' ms';
+		logger.info(timeInfo);
+		// return removedDuplicateResults;
+
+		return joinedMomentResults;
 	};
 
 	var FilterMeStream = {
@@ -338,7 +385,7 @@ var Stream =  function(config){
 	};
 
 	var FilterStream = {
-		tags: function(filter, callback){
+		tags: function(sortBy, callback){
 			var query = "g.v(0).inE('TAGS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList() ]}.dedup";
 
 			var startTime, endTime;
@@ -378,7 +425,7 @@ var Stream =  function(config){
 				}
 			);
 		},
-		users: function(filter, callback){
+		users: function(sortBy, callback){
 			// id, node
 			var query = "g.v(0).inE('USERS_REFERENCE').outV.inE('MEMBER_OF').outV.hasNot('photo', null).transform{[it, it.in('FOLLOWS').toList()]}";
 
@@ -398,7 +445,7 @@ var Stream =  function(config){
 				}
 			);
 		},
-		groups: function(filter, callback){
+		groups: function(sortBy, callback){
 			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('GROUPS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[it, it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).toList(), it.out('FOLLOWS').out('MEMBER_OF').out('TAGS_REFERENCE').back(2).in('TAGGED_IN').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('CREATED').next(), it.in('FOLLOWS').count() ]}";
 
 			var startTime, endTime;
@@ -416,9 +463,11 @@ var Stream =  function(config){
 				}
 			);
 		},
-		adventures: function(filter, callback){
+		adventures: function(sortBy, callback){
 			// imageUrl, tags, title, id
-			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('ADVENTURES_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList(), it.in('CREATED').next() ]}.dedup";
+			var query = "g.v(0).inE('COLLECTIONS_REFERENCE').outV.inE('ADVENTURES_REFERENCE').outV.inE('MEMBER_OF').outV.transform{[ it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(3).toList(), it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList(), it.in('CREATED').next(), it.adv_moments.toList() ]}.dedup";
+
+			query = _Global.gremlinStep.advMoments + query;
 
 			var startTime, endTime;
 			Step(
@@ -428,28 +477,36 @@ var Stream =  function(config){
 				},
 				function results(err, res, nodes){
 					var adventuresResults = formatAdventures(nodes);
-					adventuresResults.reverse();
 					var adventuresByRecent = sortByRecent([{ data: adventuresResults }]);
-					callback(undefined, { type: "adventures", data: adventuresByRecent });
+					var adventuresByPopular = sortByPopular([{ data: adventuresResults }]);
+
+					callback(undefined, { type: "adventures", data: { recent: adventuresByRecent, popular: adventuresByPopular } });
 					endTime = new Date().getTime();
 					var timeInfo = 'Adventures fetched from DB in: ' + (endTime - startTime) + ' ms';
 					logger.info(timeInfo);
 				}
 			);
 		},
-		moments: function(filter, callback){
+		moments: function(sortBy, callback){
 			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.inE('LIKES').toList() ] }";
 
 			var startTime, endTime;
+
+			console.log('sort by: ' + sortBy);
+
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
 					startTime = new Date().getTime();
 				},
 				function results(err, res, nodes){
-					var momentResults = formatMoments(nodes);
-					var momentsByRecent = sortByRecent([{ data: momentResults}]);
-					callback(undefined, { type: "moments", data: momentsByRecent });
+					var momentResults = formatMoments(nodes),
+						momentsByRecent, momentsByPopular;
+
+					momentsByRecent = sortByRecent([{ type: 'moments', data: momentResults}]);
+					momentsByPopular = sortByPopular([{ type: 'moments', data: momentResults}]);
+
+					callback(undefined, { type: "moments", data: { recent: momentsByRecent, popular: momentsByPopular } });
 					endTime = new Date().getTime();
 					var timeInfo = 'Moments fetched from DB in: ' + (endTime - startTime) + ' ms';
 					logger.info(timeInfo);
@@ -512,12 +569,16 @@ var Stream =  function(config){
 				filter.types = ["moments", "groups", "users","tags", "adventures"];
 			}
 
+			if (!filter.sortBy) {
+				filter.sortBy = 'popular';
+			}
+
 			Step(
 				function startSearches(){
 					var group = this.group();
 					filter.types.forEach(function(type){
 						if(FilterStream[type]) {
-							FilterStream[type](undefined, group() );
+							FilterStream[type](filter.sortBy, group() );
 						}
 					});
 				},

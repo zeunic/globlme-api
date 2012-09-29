@@ -165,7 +165,7 @@ var User = function(config) {
 				optin: newUser.optin || false,
 				fbID: newUser.fbID || '',
 				twitterAccount: newUser.twitterAccount || '',
-				bio: newUser.bio || 'Click edit in the top right to upload a profile photo, change your bio, and change your cover photo. You will need to upload your first moment from the Globl or Me tabs to select a cover photo.'
+				bio: newUser.bio || 'Click edit in the top right to change your bio and profile photo. You will need to upload 5 moments to fill your Top 5 photos at the top. You can upload moments from the Globl, Me, and Settings tabs.'
 			};
 
 			/*
