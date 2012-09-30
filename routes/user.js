@@ -165,7 +165,7 @@ var User = function(config) {
 				optin: newUser.optin || false,
 				fbID: newUser.fbID || '',
 				twitterAccount: newUser.twitterAccount || '',
-				bio: newUser.bio || 'Click edit in the top right to change your bio and profile photo. You will need to upload 5 moments to fill your Top 5 photos at the top. You can upload moments from the Globl, Me, and Settings tabs.'
+				bio: newUser.bio || 'Click edit in the top right to change your bio and profile photo. You will need to upload 5 moments to fill your Top 5 photos above. You can upload moments from the Globl, Me, and Settings tabs.'
 			};
 
 			/*
@@ -179,7 +179,8 @@ var User = function(config) {
 			//	if (userData[prop] == 'required');
 			//	console.log('required field was missing...');
 			// }
-			// console.log(userData);
+			console.log('create this user: ');
+			console.log(userData);
 
 			Step(
 				function checkUserNameAndEmail(){
@@ -187,6 +188,8 @@ var User = function(config) {
 					getUserByEmail(userData.email, this.parallel() );
 				},
 				function createUserObject(err, resultByUsername, resultByEmail) {
+					console.log('get by email and username back...');
+					console.dir(arguments);
 					if(!err && !resultByUsername && !resultByEmail) {
 						return userData;
 					} else {
@@ -195,6 +198,7 @@ var User = function(config) {
 					}
 				},
 				function createNode(err, newUserObject) {
+					console.log('there didnt seem to be an error, make a node');
 					if(newUserObject) {
 						userData = newUserObject;
 						userNode = db.createNode(userData);
@@ -202,13 +206,15 @@ var User = function(config) {
 					}
 				},
 				function uploadImagesToCDN(err, result) {
+					console.log('node made, now upload photo...');
 					if(userData.photo) {
 						ImagesModule.storeImagesToCDN(userData.photo, userData.guid, this);
 					} else {
-						return 'no photo given';
+						this();
 					}
 				},
 				function imagesSavedToCDN(err, results) {
+					console.log('images uploaded?');
 					if(!err && results.length) {
 						userNode._data.data.photo = results[results.length-1];
 					} else {
@@ -218,18 +224,25 @@ var User = function(config) {
 					return userNode;
 				},
 				function saveNode(err, createdNode){
+					console.log('images uploaded');
 					userNode.save(this);
 				},
 				function indexNode(){
+					console.log('node saved...');
+
 					userNode.index( INDEX_NAME, 'email', newUser.email, this.parallel() );
 					userNode.index( INDEX_NAME, 'username', newUser.username, this.parallel() );
 					userNode.index( 'fulltext', 'username', newUser.username, this.parallel() );
 					if (newUser.fbID) { userNode.index( INDEX_NAME, 'fbID', newUser.fbID, this.parallel() ); }
 				},
 				function relateUserRef(){
+					console.log('node was indexed');
+
 					userNode.createRelationshipTo( UserReferenceNode, 'MEMBER_OF', {}, this );
 				},
 				function getUserFollows(){
+					console.log('node made a user');
+
 					if(newUser.followList.length) {
 						userFollows = [];
 						var group = this.group();
@@ -238,10 +251,13 @@ var User = function(config) {
 							db.getNodeById( parseInt(userID), group() );
 						});
 					} else {
-						return undefined; // is it bad that i don't fucking get this?
+						console.log('no follows...');
+						this(true, false); // is it bad that i don't fucking get this?
 					}
 				},
 				function relateUserFollows(err, results){
+					console.log('got the user follows');
+					console.dir(arguments);
 					userFollows = results;
 					if(!err && newUser.followList.length && results) {
 						var group = this.group();
@@ -250,15 +266,18 @@ var User = function(config) {
 							userNode.createRelationshipTo( user , 'FOLLOWS', {}, group() );
 						});
 					} else {
-						return undefined; // is it bad that i don't fucking get this?
+						this(); // is it bad that i don't fucking get this?
 					}
 				},
 				function userSaveComplete(err){
+					console.log('user save complete!');
 					if(!err) {
 						userData.id = userNode.id;
 						res.json(  { status: "success", data: userData } );
+						console.log('sent!');
 					} else {
 						res.json( { status: "error", message: err } );
+						console.log('error!');
 					}
 				}
 			);

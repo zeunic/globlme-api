@@ -127,7 +127,7 @@ var setUpRequest = [validate.validateRequestData, validate.defineRequestAction, 
 
 // placeholder api version precondition
 api.param(':apiVersion', function(req, res, next, apiVersion){
-	if(apiVersion === 'v1.1') {
+	if(apiVersion === 'v1.2') {
 		next();
 	} else {
 		res.json({ status: "error", message: "api version invalid, please upgrade your application" });
