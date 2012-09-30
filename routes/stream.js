@@ -203,6 +203,8 @@ var Stream =  function(config){
 					newObj.adventureMoments = adventureMoments.data;
 					newObj.totalLikes = adventureMoments.totalLikes;
 
+					console.log(newObj.totalLikes);
+
 
 					if (adventure.data.startDate) {
 						newObj.recent = adventure.data.startDate;
@@ -280,8 +282,8 @@ var Stream =  function(config){
 		// TODO: Move to a sorting file / object
 
 		joinedMomentResults.sort(function(a,b){
-			var aDecayLikes = a.totalLikes /  ( (new Date().getTime() - a.node.date) / 1000 / 60 / 60 / 24 );
-			var bDecayLikes = b.totalLikes / ( (new Date().getTime() - b.node.date) / 1000 / 60 / 60 / 24 );
+			var aDecayLikes = a.totalLikes /  (( (new Date().getTime() - a.node.date) / 1000 / 60 / 60 / 24 ) + 1);
+			var bDecayLikes = b.totalLikes / (( (new Date().getTime() - b.node.date) / 1000 / 60 / 60 / 24 ) + 1);
 
 			if(aDecayLikes < bDecayLikes)
 				return 1;
@@ -531,7 +533,10 @@ var Stream =  function(config){
 			);
 		},
 		adventures: function(userID, callback){
-			var query = "g.v().out('CREATED','MEMBER_OF').out('MEMBER_OF').out('ADVENTURES_REFERENCE').back(2).transform{[ [it], it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList(), it.in('CREATED').next(), it ]}.dedup".replace('v()','v('+userID+')');
+			var query = "g.v().out('CREATED','MEMBER_OF').out('MEMBER_OF').out('ADVENTURES_REFERENCE').back(2).transform{[ [it], it.in('MEMBER_OF').out('MEMBER_OF').out('MOMENTS_REFERENCE').back(2).toList(), it.in('MEMBER_OF').out('TAGGED_IN').toList(), it.in('CREATED').next(), it.adv_moments.toList() ]}.dedup".replace('v()','v('+userID+')');
+
+			query = _Global.gremlinStep.advMoments + _Global.gremlinStep.usersIn + _Global.gremlinStep.likes + _Global.gremlinStep.comments + _Global.gremlinStep.tags + _Global.gremlinStep.creator + query;
+
 			Step(
 				function callGremlin(){
 					executeGremlin(query, this);
@@ -704,17 +709,22 @@ var Stream =  function(config){
 				query = searchFilter.query,
 				users, tags, adventures;
 
+			console.log(query);
+
 			Step(
 				function searchUsers(){
 					if(types.users) {
+						console.log('search users...');
 						SearchModule.searchAll(query, 'username', this);
 					} else {
 						this(undefined, []);
 					}
 				},
 				function searchTags(err, userResults){
+					console.log(err, userResults);
 					users = FormatUtil.users( userResults );
 					if(types.tags) {
+						console.log('search tags...');
 						SearchModule.searchAll(query, 'tag', this);
 					} else {
 						this(undefined, []);
@@ -723,6 +733,7 @@ var Stream =  function(config){
 				function searchAdventures(err, tagResults){
 					tags = FormatUtil.tags( tagResults );
 					if(types.adventures) {
+						console.log('search adventures...');
 						SearchModule.searchAll(query, 'title', this);
 					} else {
 						this(undefined, []);
@@ -1049,7 +1060,6 @@ var Stream =  function(config){
 					res.json({status: "success", data: collectionObject });
 				}
 			);
-
 		}
 	};
 };
