@@ -672,7 +672,7 @@ var Stream =  function(config){
 				function setNode(err, result){
 					node = result;
 					if (err) {
-						res.json({ status: 'error', message: err });
+						res.json({ status: 'error', message: "Error: Unable to delete currently." });
 					} else {
 						node.del(this, true);
 					}
@@ -1032,6 +1032,7 @@ var Stream =  function(config){
 					switch (collectionType) {
 						case 'adventure' :
 							node = FormatUtil.adventureNode(collection[0]);
+							collectionObject.date = node.date;
 							collectionObject.creator = FormatUtil.user(collection[1]);
 							collectionObject.members = FormatUtil.users(collection[2]);
 							collectionObject.followers = FormatUtil.users(collection[3]);
@@ -1055,6 +1056,8 @@ var Stream =  function(config){
 					if(includeMoments) {
 						collectionObject.moments = FormatUtil.moments( moments );
 					}
+
+					// console.log(collectionObject.moments);
 
 					// console.log(FormatUtil.graphID( adventure.self ), FormatUtil.graphID( creator.self ), users_in.length, followers.length, moments.length);
 					res.json({status: "success", data: collectionObject });

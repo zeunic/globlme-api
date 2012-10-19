@@ -89,6 +89,7 @@ var Moment = function(config){
 
 					if(newMoment.users.length) {
 						for (var i=0, j=newMoment.users.length; i<j; i++) {
+							console.log('get user for moment: ' + newMoment.users[i]);
 							db.getNodeById( newMoment.users[i], group() );
 						}
 					} else {

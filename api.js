@@ -97,7 +97,8 @@ api.configure(function(){
 	api.set('views', __dirname + '/views');
 	api.set('view engine', 'jade');
 	api.use(function(req,res,next){
-		if (req.originalUrl === '/v1.1/uploads') {
+		console.log(req.originalUrl);
+		if (req.originalUrl === '/v1.2/uploads' || req.originalUrl === '/v1.3/uploads') {
 			ImageModule.acceptAsyncUpload(req,res,next);
 		} else {
 			next();
@@ -127,7 +128,7 @@ var setUpRequest = [validate.validateRequestData, validate.defineRequestAction, 
 
 // placeholder api version precondition
 api.param(':apiVersion', function(req, res, next, apiVersion){
-	if(apiVersion === 'v1.2') {
+	if(apiVersion === 'v1.2' || apiVersion === 'v1.3') {
 		next();
 	} else {
 		res.json({ status: "error", message: "api version invalid, please upgrade your application" });
