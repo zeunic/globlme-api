@@ -483,8 +483,9 @@ var Stream =  function(config){
 					var adventuresResults = formatAdventures(nodes);
 
 					console.log("adventures: " + adventuresResults.length);
-					var adventuresByRecent = sortByRecent([{ data: adventuresResults }]);
-					var adventuresByPopular = sortByPopular([{ data: adventuresResults }]);
+					// we will regret this later:
+					var adventuresByRecent = sortByRecent([{ data: adventuresResults }]).slice(0,40);
+					var adventuresByPopular = sortByPopular([{ data: adventuresResults }]).slice(0,40);
 
 					callback(undefined, { type: "adventures", data: { recent: adventuresByRecent, popular: adventuresByPopular } });
 					endTime = new Date().getTime();
@@ -514,8 +515,9 @@ var Stream =  function(config){
 
 					console.log("moments total: " + momentResults.length);
 
-					momentsByRecent = sortByRecent([{ type: 'moments', data: momentResults}]);
-					momentsByPopular = sortByPopular([{ type: 'moments', data: momentResults}]);
+					// we will regret this later:
+					momentsByRecent = sortByRecent([{ type: 'moments', data: momentResults}]).slice(0,200);
+					momentsByPopular = sortByPopular([{ type: 'moments', data: momentResults}]).slice(0,200);
 
 					callback(undefined, { type: "moments", data: { recent: momentsByRecent, popular: momentsByPopular } });
 					endTime = new Date().getTime();
