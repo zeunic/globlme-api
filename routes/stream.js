@@ -203,9 +203,6 @@ var Stream =  function(config){
 					newObj.adventureMoments = adventureMoments.data;
 					newObj.totalLikes = adventureMoments.totalLikes;
 
-					console.log(newObj.totalLikes);
-
-
 					if (adventure.data.startDate) {
 						newObj.recent = adventure.data.startDate;
 					} else {
@@ -235,8 +232,8 @@ var Stream =  function(config){
 
 	// takes an array of { type: "(collectionType)", data: [...] } objects and condenses and sorts them by .recent
 	var sortByRecent = function(nodes) {
-		var startTime, endTime;
-		startTime = new Date().getTime();
+		// var startTime, endTime;
+		// startTime = new Date().getTime();
 
 		var joinedMomentResults = [];
 		for (var i=0, j=nodes.length; i<j; i++) {
@@ -264,15 +261,15 @@ var Stream =  function(config){
 			}
 		}
 
-		endTime = new Date().getTime();
-		var timeInfo = 'Nodes sorted by recent in: ' + (endTime - startTime) + ' ms';
-		logger.info(timeInfo);
+		// endTime = new Date().getTime();
+		// var timeInfo = 'Nodes sorted by recent in: ' + (endTime - startTime) + ' ms';
+		// logger.info(timeInfo);
 		return removedDuplicateResults;
 	};
 
 	var sortByPopular = function(nodes) {
-		var startTime, endTime;
-		startTime = new Date().getTime();
+		// var startTime, endTime;
+		// startTime = new Date().getTime();
 
 		var joinedMomentResults = [];
 		for (var i=0, j=nodes.length; i<j; i++) {
@@ -305,9 +302,9 @@ var Stream =  function(config){
 			}
 		} */
 
-		endTime = new Date().getTime();
-		var timeInfo = 'Nodes sorted by popularity in: ' + (endTime - startTime) + ' ms';
-		logger.info(timeInfo);
+		// endTime = new Date().getTime();
+		// var timeInfo = 'Nodes sorted by popularity in: ' + (endTime - startTime) + ' ms';
+		// logger.info(timeInfo);
 		// return removedDuplicateResults;
 
 		return joinedMomentResults;
@@ -478,13 +475,20 @@ var Stream =  function(config){
 					startTime = new Date().getTime();
 				},
 				function results(err, res, nodes){
+					endTime = new Date().getTime();
+					var timeInfo = 'Adventures fetched from DB in: ' + (endTime - startTime) + ' ms';
+					logger.info(timeInfo);
+					startTime = new Date().getTime();
+
 					var adventuresResults = formatAdventures(nodes);
+
+					console.log("adventures: " + adventuresResults.length);
 					var adventuresByRecent = sortByRecent([{ data: adventuresResults }]);
 					var adventuresByPopular = sortByPopular([{ data: adventuresResults }]);
 
 					callback(undefined, { type: "adventures", data: { recent: adventuresByRecent, popular: adventuresByPopular } });
 					endTime = new Date().getTime();
-					var timeInfo = 'Adventures fetched from DB in: ' + (endTime - startTime) + ' ms';
+					timeInfo = 'Adventures formatted & sorted in: ' + (endTime - startTime) + ' ms';
 					logger.info(timeInfo);
 				}
 			);
@@ -494,23 +498,28 @@ var Stream =  function(config){
 
 			var startTime, endTime;
 
-			console.log('sort by: ' + sortBy);
-
 			Step(
 				function callGremlin(){
-					executeGremlin(query, this);
 					startTime = new Date().getTime();
+					executeGremlin(query, this);
 				},
 				function results(err, res, nodes){
+					endTime = new Date().getTime();
+					var timeInfo = 'Moments fetched from DB in: ' + (endTime - startTime) + ' ms';
+					logger.info(timeInfo);
+					startTime = new Date().getTime();
+
 					var momentResults = formatMoments(nodes),
 						momentsByRecent, momentsByPopular;
+
+					console.log("moments total: " + momentResults.length);
 
 					momentsByRecent = sortByRecent([{ type: 'moments', data: momentResults}]);
 					momentsByPopular = sortByPopular([{ type: 'moments', data: momentResults}]);
 
 					callback(undefined, { type: "moments", data: { recent: momentsByRecent, popular: momentsByPopular } });
 					endTime = new Date().getTime();
-					var timeInfo = 'Moments fetched from DB in: ' + (endTime - startTime) + ' ms';
+					timeInfo = 'Moments sorted in: ' + (endTime - startTime) + ' ms';
 					logger.info(timeInfo);
 				}
 			);
