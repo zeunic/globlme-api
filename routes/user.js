@@ -392,7 +392,7 @@ var User = function(config) {
 					keyData: null,                    /* String or Buffer containing key data, as certData */
 					passphrase: null,                 /* A passphrase for the Key file */
 					ca: null,                         /* String or Buffer of CA data to use for the TLS connection */
-					gateway: 'gateway.sandbox.push.apple.com',/* gateway address */
+					gateway: 'gateway.push.apple.com',/* gateway address */
 					port: 2195,                       /* gateway port */
 					enhanced: true,                   /* enable enhanced format */
 					errorCallback: function(err, notification){
