@@ -211,6 +211,10 @@ api.post('/:apiVersion/user/updatePhoto', setUpRequest, UserModule.updatePhoto);
 api.post('/:apiVersion/user/invitations', setUpRequest, UserModule.getInvitations);
 api.post('/:apiVersion/notifications/push', setUpRequest, UserModule.pushNotification);
 
+// features banners
+api.post('/:apiVersion/featureBanners', setUpRequest, StreamModule.getFeatureHeader);
+
+// feedback
 api.post('/:apiVersion/feedback', setUpRequest, function(req, res, next){
 	var feedback = JSON.parse(req.body.data).text,
 		username = JSON.parse(req.body.data).username;

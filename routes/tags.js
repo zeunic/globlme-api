@@ -40,11 +40,11 @@ var Tag = function(config) {
 					} else {
 						tag.save(this);
 					}
-				},/*
+				},
 				function indexTag(err, results){
 					tag.index( INDEX_NAME, 'tag', requestData.tag, this.parallel() );
 					tag.index( 'fulltext', 'tag', requestData.tag, this.parallel() );
-				}, */
+				},
 				function relateTagRef(){
 					tag.createRelationshipTo( TagReferenceNode, 'MEMBER_OF', {}, this );
 				},
