@@ -1078,20 +1078,20 @@ var Stream =  function(config){
 		getFeatureHeader: function(req, res, next) {
 
 			var globlStreamFeatures = [
-					{width: 132, height: 91, image: 'http://www.globl.me/images/halloween.jpg', onClick: function () { G.streamManager.openCollection({ type: 'tag', id: 1398, title: 'Halloween'}); } },
-					{width: 132, height: 91, image: 'http://www.globl.me/images/vintage.jpg', onClick: function () { showShareWindow(); } },
-					{width: 132, height: 91, image: 'http://www.globl.me/images/share.jpg', onClick: function () { showShareWindow(); } },
-					{width: 132, height: 91, image: 'http://www.globl.me/images/feedback.jpg', onClick: function () { showEmailDialog(); } }
+					{width: 132, height: 91, image: 'http://www.globl.me/images/halloween.jpg', onClick: "(function () { G.streamManager.openCollection({ type: 'tag', id: 1398, title: 'Halloween'}); })();" },
+					{width: 132, height: 91, image: 'http://www.globl.me/images/vintage.jpg', onClick: "(function () { G.showShareWindow(); })();" },
+					{width: 132, height: 91, image: 'http://www.globl.me/images/share.jpg', onClick: "(function () { G.showShareWindow(); })();" },
+					{width: 132, height: 91, image: 'http://www.globl.me/images/feedback.jpg', onClick: "(function () { G.showEmailDialog(); })();" }
 				],
 				meStreamFeatures = [
-					{width: 132, height: 91, image: 'http://www.globl.me/images/feedback.jpg', onClick: function () { showEmailDialog(); } },
-					{width: 132, height: 91, image: 'http://www.globl.me/images/share.jpg', onClick: function () { showShareWindow(); } }
+					{width: 132, height: 91, image: 'http://www.globl.me/images/feedback.jpg', onClick: "(function () { G.showEmailDialog(); })();" },
+					{width: 132, height: 91, image: 'http://www.globl.me/images/share.jpg', onClick: "(function () { G.showShareWindow(); })();" }
 				],
 				registerFeatures = [
-					{width: 132, height: 91, image: 'http://www.globl.me/images/halloween.jpg', onClick: function () { G.streamManager.openCollection({ type: 'tag', id: 1398, title: 'Halloween'}); } },
-					{width: 132, height: 91, image: 'http://www.globl.me/images/register.jpg', onClick: function () { showRegisterTab(); } },
-					{width: 132, height: 91, image: 'http://www.globl.me/images/vintage.jpg', onClick: function () { showRegisterTab(); } },
-					{width: 132, height: 91, image: 'http://www.globl.me/images/feedback.jpg', onClick: function () { showEmailDialog(); } }
+					{width: 132, height: 91, image: 'http://www.globl.me/images/halloween.jpg', onClick: "(function () { G.streamManager.openCollection({ type: 'tag', id: 1398, title: 'Halloween'}); })();" },
+					{width: 132, height: 91, image: 'http://www.globl.me/images/register.jpg', onClick: "(function () { G.showRegisterTab(); })();" },
+					{width: 132, height: 91, image: 'http://www.globl.me/images/vintage.jpg', onClick: "(function () { G.showRegisterTab(); })();" },
+					{width: 132, height: 91, image: 'http://www.globl.me/images/feedback.jpg', onClick: "(function () { G.showEmailDialog(); })();" }
 				];
 
 			res.json({ status: "success", data: { globl: globlStreamFeatures, register: registerFeatures, me: meStreamFeatures } });
