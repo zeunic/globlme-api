@@ -495,7 +495,7 @@ var Stream =  function(config){
 			);
 		},
 		moments: function(sortBy, callback){
-			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV.transform{ [it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.inE('LIKES').toList() ] }";
+			var query = "g.v(0).inE('MOMENTS_REFERENCE').outV.inE('MEMBER_OF').outV[0..200].transform{ [it, it.out('TAGGED_IN').toList(), it.in('CREATED').next(), it.inE('LIKES').toList() ] }";
 
 			var startTime, endTime;
 
@@ -720,41 +720,39 @@ var Stream =  function(config){
 				query = searchFilter.query,
 				users, tags, adventures;
 
-			console.log(query);
-
-			Step(
-				function searchUsers(){
-					if(types.users) {
-						console.log('search users...');
-						SearchModule.searchAll(query, 'username', this);
-					} else {
-						this(undefined, []);
+			if (query === '') {
+				res.json({ status: 'error', message: 'That serach term cannot be searched.' });
+			} else {
+				Step(
+					function searchUsers(){
+						if(types.users) {
+							SearchModule.searchAll(query, 'username', this);
+						} else {
+							this(undefined, []);
+						}
+					},
+					function searchTags(err, userResults){
+						users = FormatUtil.users( userResults );
+						if(types.tags) {
+							SearchModule.searchAll(query, 'tag', this);
+						} else {
+							this(undefined, []);
+						}
+					},
+					function searchAdventures(err, tagResults){
+						tags = FormatUtil.tags( tagResults );
+						if(types.adventures) {
+							SearchModule.searchAll(query, 'title', this);
+						} else {
+							this(undefined, []);
+						}
+					},
+					function sendResults(err, advResults){
+						adventures = FormatUtil.adventures( advResults );
+						res.json({ status: "success", data: { users: users, tags: tags, adventures: adventures } });
 					}
-				},
-				function searchTags(err, userResults){
-					console.log(err, userResults);
-					users = FormatUtil.users( userResults );
-					if(types.tags) {
-						console.log('search tags...');
-						SearchModule.searchAll(query, 'tag', this);
-					} else {
-						this(undefined, []);
-					}
-				},
-				function searchAdventures(err, tagResults){
-					tags = FormatUtil.tags( tagResults );
-					if(types.adventures) {
-						console.log('search adventures...');
-						SearchModule.searchAll(query, 'title', this);
-					} else {
-						this(undefined, []);
-					}
-				},
-				function sendResults(err, advResults){
-					adventures = FormatUtil.adventures( advResults );
-					res.json({ status: "success", data: { users: users, tags: tags, adventures: adventures } });
-				}
-			);
+				);
+			}
 		},
 		oldSearch: function(req,res,next) {
 			var filter = JSON.parse(req.body.data);
@@ -1078,7 +1076,7 @@ var Stream =  function(config){
 		getFeatureHeader: function(req, res, next) {
 
 			var globlStreamFeatures = [
-					{width: 132, height: 91, image: 'http://www.globl.me/images/halloween.jpg', onClick: "(function () { G.streamManager.openCollection({ type: 'tag', id: 1398, title: 'Halloween'}); })();" },
+					{width: 132, height: 91, image: 'http://www.globl.me/images/christmas.jpg', onClick: "(function () { G.streamManager.openCollection({ type: 'tag', id: 2371, title: 'christmas'}); })();" },
 					{width: 132, height: 91, image: 'http://www.globl.me/images/vintage.jpg', onClick: "(function () { G.showShareWindow(); })();" },
 					{width: 132, height: 91, image: 'http://www.globl.me/images/share.jpg', onClick: "(function () { G.showShareWindow(); })();" },
 					{width: 132, height: 91, image: 'http://www.globl.me/images/feedback.jpg', onClick: "(function () { G.showEmailDialog(); })();" }
@@ -1088,7 +1086,7 @@ var Stream =  function(config){
 					{width: 132, height: 91, image: 'http://www.globl.me/images/share.jpg', onClick: "(function () { G.showShareWindow(); })();" }
 				],
 				registerFeatures = [
-					{width: 132, height: 91, image: 'http://www.globl.me/images/halloween.jpg', onClick: "(function () { G.streamManager.openCollection({ type: 'tag', id: 1398, title: 'Halloween'}); })();" },
+					{width: 132, height: 91, image: 'http://www.globl.me/images/christmas.jpg', onClick: "(function () { G.streamManager.openCollection({ type: 'tag', id: 2371, title: 'christmas'}); })();" },
 					{width: 132, height: 91, image: 'http://www.globl.me/images/register.jpg', onClick: "(function () { G.showRegisterTab(); })();" },
 					{width: 132, height: 91, image: 'http://www.globl.me/images/vintage.jpg', onClick: "(function () { G.showRegisterTab(); })();" },
 					{width: 132, height: 91, image: 'http://www.globl.me/images/feedback.jpg', onClick: "(function () { G.showEmailDialog(); })();" }
