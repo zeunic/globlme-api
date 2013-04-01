@@ -20,6 +20,8 @@ log4js.configure({
     replaceConsole: false
 });
 
+var moments, adventures;
+
 var logger = log4js.getLogger('stream');
 
 var Search = require('search.js'),
@@ -27,7 +29,6 @@ var Search = require('search.js'),
 	Step = require('step'),
 	Neo4j = require('neo4j'),
 	Format = require('format.js');
-
 
 var db,
 	TAGS_REFERENCE,
