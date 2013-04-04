@@ -71,19 +71,7 @@ process.on('uncaughtException', function (err) {
 		"STACK: " + err.stack;
 
 	if(api.settings.env === 'production') {
-		email.send({
-			host: 'smtp.gmail.com',
-			port: '25',
-			to: 'Stephen Rivas Jr <stephen@zeunic.com>',
-			from: 'Globl.me API <social@zeunic.com>',
-			subject: 'WARNING: Globl.me API Error',
-			body: message,
-			username: 'social@zeunic.com',
-			password: '$s4sites',
-			authentication: 'login'
-		}, function(err, result){
-			console.log(err || result);
-		});
+		// do nothing any more
 	}
 
 });
@@ -148,7 +136,7 @@ api.all('/*',function(req,res,next){
  */
 
 api.post('/uploads/', function(req,res,next){
-	
+
 });
 
 // stream route declarations -> maps to stream.js
@@ -222,20 +210,7 @@ api.post('/:apiVersion/feedback', setUpRequest, function(req, res, next){
 	var message = "In App Feedback from: " + username + ": \r\n\r\n" +
 		feedback;
 
-	email.send({
-		host: 'smtp.gmail.com',
-		port: '25',
-		to: 'Support <social@zeunic.com>',
-		from: 'Feedback <social@zeunic.com>',
-		subject: 'Globl.me In-App Feedback',
-		body: message,
-		username: 'social@zeunic.com',
-		password: '$s4sites',
-		authentication: 'login'
-	}, function(err, result){
-		console.log(err || result);
-		if(result) res.json({ status: "success", message: "Feedback sent"});
-	});
+	// do nothing any more
 });
 
 
